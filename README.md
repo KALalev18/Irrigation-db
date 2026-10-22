@@ -1,156 +1,143 @@
-# Smart Irrigation Database System
+# Irrigation DB
 
-A production-grade IoT backend for managing sensor-driven field irrigation. Handles 100k+ daily sensor readings, automated schedule evaluation, and weather-adjusted event triggering.
+A PostgreSQL database and REST API for a sensor-driven irrigation system: it stores soil and weather readings, runs watering schedules, and decides per zone whether to water based on soil moisture and recent rain.
 
-**Stack:** Node.js 20 · TypeScript · Express · PostgreSQL 16 · Prisma ORM · Winston · Docker
+![Dashboard](docs/dashboard.png)
 
----
+## What it does
 
-## Architecture
+A farm or greenhouse has zones (a field, a greenhouse, an orchard block), each with sensors that report every few minutes. The system needs to store those readings, notice when a sensor is broken, and water a zone only when it is actually dry, not just because the clock says 06:00.
 
-Files are organized by **domain** (DDD), not by type. Every module owns its controller, service, repository, and validation in one directory. This keeps the blast radius of a feature change local and avoids the cross-cutting hunt through `controllers/`, `services/`, `repositories/` that plagues layer-first layouts.
+This project covers the backend side of that:
 
-```
-src/
-├── index.ts                         # Process lifecycle (graceful shutdown, signal handling)
-├── app.ts                           # Dependency injection wiring + route mounting
-├── infrastructure/
-│   ├── database.ts                  # Singleton PrismaClient with structured query logging
-│   ├── logger.ts                    # Winston with JSON transport for production, colorized for dev
-│   └── rateLimiter.ts               # Separate limiters for IoT ingestion vs. regular API
-└── modules/
-    ├── sensors/                     # Sensor CRUD + bulk reading ingestion
-    ├── irrigation/                  # Event lifecycle + automated threshold triggering
-    ├── weather/                     # Snapshot storage + precipitation aggregation
-    ├── schedules/                   # Cron-based schedule CRUD
-    └── zones/                       # Zone management (irrigation boundaries)
-```
+- **Ingests sensor readings in batches** (up to 500 per request) from IoT gateways. Readings from unknown or deactivated sensors are rejected. Readings outside a sensor's calibration range are stored but flagged as anomalies.
+- **Runs schedules.** Every minute, `ScheduleRunner` checks which cron schedules are due. If 5 mm or more of rain fell in the last 24 hours, it skips them. Otherwise it reads the zone's latest soil moisture and starts an irrigation event only if the average is below 30%.
+- **Stops broken sensors from flooding a field.** If half or more of a zone's latest readings are anomalies, auto-irrigation is aborted instead of trusting them.
+- **Tracks irrigation events** from start to completion, with protection against the same event being completed twice by concurrent requests.
+- **Includes a dashboard** at `http://localhost:3000` showing the stored data, with a live `EXPLAIN ANALYZE` of the main query and a button that sends a test batch through the ingest endpoint.
 
-Dependency injection is **manual** — repositories are instantiated in `app.ts` and passed into services via constructor. A container library (tsyringe, inversify) was considered and rejected: at five domains the overhead of decorator-based reflection isn't justified, and explicit wiring makes the graph immediately visible without chasing decorators.
+## Tech stack
 
----
+TypeScript, Node.js 22, Express 5, PostgreSQL 16, Prisma 6, Zod (request validation), Winston (logging), Jest, Docker Compose, GitHub Actions.
 
-## Database Design Decisions
+## Running it
 
-### Why not TimescaleDB?
-
-TimescaleDB hypertables would be the ideal fit for the `sensor_readings` volume. The schema and migration comments preserve the hook points (partition by range on `recorded_at`) so it's a one-migration upgrade. Plain PostgreSQL was chosen to keep the Docker Compose self-contained without requiring a custom image.
-
-### Index strategy and the 30% query improvement
-
-The `sensor_readings` table uses a **composite index on `(sensor_id, recorded_at DESC)`** rather than the naive single-column index on `sensor_id`.
-
-The canonical dashboard query is:
-
-```sql
-SELECT * FROM sensor_readings
-WHERE sensor_id = $1
-ORDER BY recorded_at DESC
-LIMIT 100;
-```
-
-With a single-column index on `sensor_id`, PostgreSQL fetches all rows for the sensor and then performs a sort. With the composite index, it satisfies the `WHERE` and `ORDER BY` in a single index scan — no sort step. On a table with 3M rows (30 days × 8 sensors × ~12,960 readings/sensor), `EXPLAIN ANALYZE` showed p95 latency drop from ~42ms to ~29ms in testing, ~31% improvement.
-
-The secondary index on `recorded_at` alone exists for the weather-based range queries and time-windowed aggregations (`SELECT AVG(value) FROM sensor_readings WHERE recorded_at BETWEEN $1 AND $2`).
-
-### Why `is_anomaly` is stored rather than computed
-
-Sensor calibration bounds (`min_value`, `max_value`) can change if a sensor is recalibrated. Storing the anomaly flag at ingest time means historical audit logs are immutable — a query for "all anomalies last month" returns consistent results regardless of recalibration events that happened since. Recomputing it on read would silently rewrite history.
-
-### Irrigation event double-complete protection
-
-The `IrrigationRepository.complete` method wraps a read-check-update in a `SERIALIZABLE` transaction. Two concurrent PATCH requests to complete the same event will cause one to see `status = 'COMPLETED'` and throw before the update. Without this, both writes succeed and you get inconsistent `ended_at` / `volume_liters` values.
-
----
-
-## Sensor Edge Cases
-
-| Scenario                         | Handling                                                          |
-| -------------------------------- | ----------------------------------------------------------------- |
-| Sensor not found                 | Reading is counted as `rejected`, logged at WARN, not inserted    |
-| Sensor is inactive               | Same as above                                                     |
-| Negative moisture value          | Inserted with `is_anomaly = true`, logged at WARN                 |
-| Value outside calibration bounds | Inserted with `is_anomaly = true`                                 |
-| >50% of zone sensors anomalous   | Auto-irrigation aborted to prevent over-watering                  |
-| No readings available for zone   | Auto-irrigation skipped with structured log, no crash             |
-| Clock-drifted timestamps         | Accepted as-is; `recorded_at` is device-supplied, not server time |
-
----
-
-## Running Locally
-
-**Prerequisites:** Docker, Docker Compose
+You need Docker and Node.js 22+.
 
 ```bash
+git clone <repo-url> irrigation-db
+cd irrigation-db
 cp .env.example .env
-docker-compose up -d
-npx prisma migrate dev --name init
-npm run db:seed      # seeds 30 days of realistic data (~130k readings)
-```
 
-API is available at `http://localhost:3000`. pgAdmin at `http://localhost:5050` (admin@irrigation.local / pgadminpassword).
-
-**Development (without Docker):**
-
-```bash
+docker compose up -d --build   # Postgres + API; migrations run on API start
 npm install
-# Set DATABASE_URL in .env to a local PostgreSQL instance
-npx prisma migrate dev
-npm run dev
+npm run db:seed                # 30 days of sample data ending now (~33k readings)
 ```
 
----
+Then open http://localhost:3000.
 
-## API Overview
+The seed clears existing data first, so you can re-run it at any time. The API runs in Docker; the seed and benchmark run from your machine and connect to Postgres on port 5433.
 
-| Method                | Path                              | Description                                      |
-| --------------------- | --------------------------------- | ------------------------------------------------ |
-| GET                   | `/health`                         | Liveness check                                   |
-| GET/POST              | `/api/v1/zones`                   | Zone management                                  |
-| GET/POST              | `/api/v1/sensors`                 | Sensor registration                              |
-| GET                   | `/api/v1/sensors/:id/readings`    | Latest readings for a sensor                     |
-| POST                  | `/api/v1/sensors/readings/bulk`   | IoT bulk ingestion (rate-limited at 500 req/min) |
-| GET/POST              | `/api/v1/irrigation`              | Manual irrigation events                         |
-| PATCH                 | `/api/v1/irrigation/:id/complete` | Close an irrigation event                        |
-| GET/POST              | `/api/v1/weather`                 | Weather snapshots                                |
-| GET/POST/PATCH/DELETE | `/api/v1/schedules`               | Irrigation schedules                             |
+To run the API outside Docker (with hot reload), keep the `postgres` container running and use `npm run dev`.
 
----
+pgAdmin is available with `docker compose --profile tools up -d` at http://localhost:5050 (admin@irrigation.local / pgadminpassword).
 
-## Error Model
-
-All errors follow a consistent envelope:
-
-```json
-{
-  "error": {
-    "code": "SENSOR_NOT_FOUND",
-    "message": "Sensor with id \"abc\" not found",
-    "meta": {}
-  }
-}
-```
-
-PostgreSQL deadlocks (`P2034`) return `503` with `TRANSACTION_DEADLOCK` — callers are expected to retry with backoff. Unique violations return `409`.
-
----
-
-## Tests
+## Tests and checks
 
 ```bash
-npm test
-npm test -- --coverage
+npm test            # unit tests (no database needed)
+npm run lint
+npm run typecheck
 ```
 
-Unit tests mock the repository layer and assert the service logic directly — anomaly flagging, abort conditions, error throws. No database required for unit tests.
+The unit tests cover the logic that decides things: anomaly flagging and rejection during ingest, the irrigation abort and threshold rules, the cron matcher, and the schedule runner (due / not due / skipped after rain / each minute processed once). Repositories are mocked. CI runs typecheck, lint and tests on every push.
 
----
+## Index benchmark
 
-## CI/CD
+The most frequent query is "latest 100 readings for a sensor". The `sensor_readings` table has a composite index on `(sensor_id, recorded_at DESC)` for it. `npm run bench` measures what that index does compared with a plain index on `sensor_id`:
 
-`.github/workflows/main.yml` runs on every push to `main` and `develop`:
+| Index | Median | p95 |
+| --- | --- | --- |
+| `(sensor_id)` | 61.1 ms | 86.9 ms |
+| `(sensor_id, recorded_at DESC)` | 0.19 ms | 0.31 ms |
 
-1. TypeScript type check (`tsc --noEmit`)
-2. ESLint with zero-warning policy
-3. Unit tests against a PostgreSQL service container with migrations applied
-4. Coverage artifact upload
+That is on 3 million rows (50 sensors x 60,000 readings), 300 runs each, timed with `EXPLAIN ANALYZE`, PostgreSQL 16 in Docker on a laptop. With only the `sensor_id` index, Postgres has to fetch all ~60,000 rows for the sensor and sort them. With the composite index it reads the first 100 entries in order and stops. Full method and query plans are in [docs/benchmark.md](docs/benchmark.md).
+
+The same script times a 100,000-row insert through Prisma `createMany` in batches of 1,000: 12.8 s on the same machine (then rolled back).
+
+## Design decisions
+
+**Anomalies are stored, not dropped.** A reading outside the calibration range is saved with `is_anomaly = true`. The flag is set at ingest time, so if a sensor is recalibrated later, old readings keep the flag they had when they arrived. This keeps the history auditable and lets the irrigation logic notice when a sensor starts failing.
+
+**`SERIALIZABLE` transaction when completing an event.** Completing an irrigation event reads its status and then updates it. Two requests at the same moment could both see it as active and both write an end time and volume. Under `SERIALIZABLE`, Postgres rejects one of them, and the API returns `503 TRANSACTION_DEADLOCK` so the client can retry. A request for an event that is already completed gets `409`.
+
+**A small cron matcher instead of a library.** Schedules only need standard five-field expressions (numbers, `*`, lists, ranges, steps), so `src/modules/schedules/cron.ts` is about 40 lines and fully tested. The runner polls every 15 seconds but processes each minute only once, so a slow tick can't skip or double-run a schedule.
+
+**Modules by domain.** Each domain (`sensors`, `irrigation`, `schedules`, `weather`, `zones`, `stats`) has its own controller, service, repository and validation. Dependencies are wired by hand in `app.ts`, which keeps the graph easy to follow at this size.
+
+**Plain PostgreSQL, not TimescaleDB.** TimescaleDB hypertables would suit `sensor_readings` at larger volumes, but plain Postgres keeps the setup to a stock Docker image. With the indexes above, the main queries stay fast at millions of rows.
+
+## API
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/health` | Liveness check |
+| GET, POST, PATCH, DELETE | `/api/v1/zones` | Zones |
+| GET, POST, DELETE | `/api/v1/sensors` | Register, list and deactivate sensors |
+| GET | `/api/v1/sensors/:id/readings?limit=` | Latest readings for a sensor |
+| POST | `/api/v1/sensors/readings/bulk` | Batch ingest, up to 500 readings (own rate limit) |
+| GET, POST | `/api/v1/irrigation` | Start events, list by zone (`/zones/:zoneId`) |
+| PATCH | `/api/v1/irrigation/:id/complete` | Complete an event |
+| GET, POST | `/api/v1/weather` | Weather snapshots (latest or date range) |
+| GET, POST, PATCH, DELETE | `/api/v1/schedules` | Cron schedules, list by zone (`/zones/:zoneId`) |
+| GET | `/api/v1/stats` | Counts, last-24 h activity, database size |
+| GET | `/api/v1/stats/query-plan?sensorId=` | `EXPLAIN ANALYZE` of the latest-readings query |
+
+Errors use one shape: `{ "error": { "code": "SENSOR_NOT_FOUND", "message": "...", "meta": {} } }`. Validation errors return `422` with the field-level issues.
+
+Example ingest request:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/sensors/readings/bulk \
+  -H "Content-Type: application/json" \
+  -d '{"readings":[{"sensorId":"<sensor-id>","value":34.2,"recordedAt":"2026-10-22T06:00:00Z"}]}'
+# {"data":{"accepted":1,"rejected":0,"anomalies":0}}
+```
+
+## Project structure
+
+```
+prisma/
+  schema.prisma          tables, relations and indexes
+  migrations/            SQL migrations
+  seed.ts                30 days of sample data
+public/index.html        dashboard (plain HTML/JS, no build step)
+scripts/
+  benchmark-index.ts     index and insert benchmark -> docs/benchmark.md
+src/
+  index.ts               starts the server and the schedule runner, graceful shutdown
+  app.ts                 wires repositories, services and routes
+  infrastructure/        Prisma client, logger, rate limiters
+  modules/
+    sensors/             sensor CRUD and batch ingest
+    irrigation/          irrigation events and the auto-irrigation decision
+    schedules/           schedule CRUD, cron matcher, ScheduleRunner
+    weather/             weather snapshots, rain check
+    zones/               zones
+    stats/               dashboard queries
+  shared/                AppError and the global error handler
+tests/unit/              Jest unit tests
+```
+
+## What I would improve next
+
+- Integration tests against a real Postgres container, especially for the `SERIALIZABLE` race and the ingest endpoint.
+- Partition `sensor_readings` by month (or move to TimescaleDB) and add a retention policy once data reaches tens of millions of rows.
+- Fetch weather on a schedule from a real provider (Open-Meteo has a free API) instead of relying on seeded snapshots.
+- Close irrigation events automatically when their duration ends, and stop the runner from starting a new event while one is active in the same zone.
+- Run the schedule runner in a single worker or behind a database lock, so several API instances don't trigger the same schedule.
+- Authentication for the API and per-gateway API keys for ingest.
+
+## License
+
+MIT
