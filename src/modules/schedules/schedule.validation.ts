@@ -2,8 +2,7 @@ import { z } from 'zod';
 
 export const CreateScheduleSchema = z.object({
   zoneId: z.string().uuid(),
-  // Cron expression is validated syntactically here; semantic validation
-  // (e.g., no conflicting schedules) is enforced in the service layer.
+  // Syntax check only; cronMatches() in cron.ts evaluates the expression.
   cronExpr: z
     .string()
     .regex(

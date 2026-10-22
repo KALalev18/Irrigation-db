@@ -18,7 +18,7 @@ export class WeatherService {
   }
 
   // Returns true if recent precipitation makes irrigation unnecessary.
-  // Skips irrigation when 24h cumulative rain exceeds 5mm — standard agronomic rule.
+  // ScheduleRunner skips scheduled runs when the last 24 h of snapshots add up to 5 mm or more.
   async hasSufficientRecentPrecipitation(): Promise<boolean> {
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const snapshots = await this.weatherRepo.findInRange(yesterday, new Date());

@@ -1,4 +1,4 @@
-﻿// Irrigation event lifecycle + sensor-driven auto-trigger logic.
+// Irrigation event lifecycle + sensor-driven auto-trigger logic.
 import { Prisma } from '@prisma/client';
 import { IrrigationRepository } from './irrigation.repository';
 import { SensorRepository } from '../sensors/sensor.repository';

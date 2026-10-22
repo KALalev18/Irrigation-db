@@ -1,4 +1,4 @@
-﻿// All SQL for the IrrigationEvent model.
+// All SQL for the IrrigationEvent model.
 // `complete` uses a SERIALIZABLE transaction to prevent a race where two concurrent
 // requests both read status=ACTIVE and both write status=COMPLETED. Under READ COMMITTED
 // both writes would succeed; SERIALIZABLE makes Postgres reject one with P2034.

@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { IrrigationService } from './irrigation.service';
 import { StartIrrigationSchema, UpdateIrrigationEventSchema } from './irrigation.validation';
 

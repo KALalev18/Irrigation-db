@@ -1,4 +1,4 @@
-﻿// Sensor HTTP router — thin controller, no business logic.
+// Sensor HTTP router — thin controller, no business logic.
 // Routes: GET /, GET /:id, GET /:id/readings, POST /, POST /readings/bulk, DELETE /:id
 import { Router, Request, Response, NextFunction } from 'express';
 import { SensorService } from './sensor.service';
@@ -53,10 +53,9 @@ export function buildSensorRouter(sensorService: SensorService): Router {
   // POST /api/v1/sensors — register a new sensor
   router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Zod parse throws ZodError on bad input → caught by globalErrorHandler → 422
       const dto = CreateSensorSchema.parse(req.body);
       const sensor = await sensorService.register(dto);
-      res.status(201).json({ data: sensor }); // 201 Created for new resources
+      res.status(201).json({ data: sensor });
     } catch (err) {
       next(err);
     }
@@ -72,7 +71,7 @@ export function buildSensorRouter(sensorService: SensorService): Router {
       try {
         const dto = BulkIngestReadingSchema.parse(req.body);
         const result = await sensorService.bulkIngest(dto);
-        res.status(202).json({ data: result }); // 202 Accepted: processing complete but async auditing may continue
+        res.status(202).json({ data: result });
       } catch (err) {
         next(err);
       }

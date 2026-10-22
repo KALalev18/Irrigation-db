@@ -1,7 +1,3 @@
-// Schema reflects the domain model directly. Sensor and Zone are first-class aggregates.
-// TimescaleDB-style partitioning is handled at the migration level via raw SQL for the
-// sensor_readings table — Prisma cannot express it natively, but the model still owns the shape.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -47,15 +43,14 @@ model Sensor {
   @@map("sensors")
 }
 
-// Partitioned by range on recorded_at. The migration adds the hypertable declaration.
-// Index on (sensor_id, recorded_at DESC) covers the canonical "latest N readings" query
-// and slashed p95 latency by ~30% vs. the naive single-column index on sensor_id alone.
+// The (sensor_id, recorded_at DESC) index serves the "latest N readings for a sensor"
+// query without a sort step. See docs/benchmark.md for measurements.
 model SensorReading {
   id         BigInt   @id @default(autoincrement())
   sensorId   String   @map("sensor_id")
   value      Float
   recordedAt DateTime @map("recorded_at")
-  // Flag set by IrrigationService when value falls outside sensor calibration bounds.
+  // Set by SensorService at ingest when the value is outside the sensor's calibration bounds.
   // Stored rather than computed so anomaly auditing survives sensor recalibration.
   isAnomaly  Boolean  @default(false) @map("is_anomaly")
 
@@ -73,7 +68,7 @@ model WeatherSnapshot {
   humidityPct          Float    @map("humidity_pct")
   precipitationMm      Float    @map("precipitation_mm")
   windSpeedMs          Float    @map("wind_speed_ms")
-  // ETo in mm/day computed from Penman-Monteith. Stored to avoid re-computation on schedule evaluation.
+  // Reference evapotranspiration (ETo) in mm/day, as supplied by the weather source.
   evapotranspirationMm Float    @map("evapotranspiration_mm")
   source               String
 

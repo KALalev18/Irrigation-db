@@ -1,4 +1,4 @@
-﻿// All SQL for the Sensor and SensorReading models.
+// All SQL for the Sensor and SensorReading models.
 // Only this layer imports PrismaClient — services work with plain Prisma types.
 import { PrismaClient, Sensor, SensorReading, Prisma } from '@prisma/client';
 import { CreateSensorDto } from './sensor.validation';

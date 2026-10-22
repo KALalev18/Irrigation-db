@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { ScheduleService } from './schedule.service';
 import { CreateScheduleSchema, UpdateScheduleSchema } from './schedule.validation';
 

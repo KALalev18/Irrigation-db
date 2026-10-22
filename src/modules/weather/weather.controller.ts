@@ -1,6 +1,4 @@
 // Weather HTTP router — stored snapshots, new snapshot recording, and Open-Meteo proxy.
-// The /external route is a server-side proxy: browsers block direct Open-Meteo fetches
-// when the page is opened from file:// (Origin: null doesn't match Access-Control-Allow-Origin: *).
 import { Router, Request, Response, NextFunction } from 'express';
 import { WeatherService } from './weather.service';
 import { CreateWeatherSnapshotSchema } from './weather.validation';

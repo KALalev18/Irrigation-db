@@ -1,13 +1,11 @@
 // Zod schemas for the Sensor domain.
-// z.infer<> extracts TypeScript types directly — no second declaration needed.
-// ZodError on failure → global handler converts it to a 422 with per-field issues.
 import { z } from 'zod';
 import { SensorType } from '@prisma/client';
 
 export const CreateSensorSchema = z.object({
   zoneId:       z.string().uuid(),
   // Serial numbers identify physical hardware: uppercase alphanumeric only,
-  // 4–64 chars. The regex blocks names that would be ambiguous in log files.
+  // 4-64 chars.
   serialNumber: z.string().min(4).max(64).regex(/^[A-Z0-9_-]+$/, 'Serial must be uppercase alphanumeric'),
   type:         z.nativeEnum(SensorType),
   unit:         z.string().min(1).max(20),
@@ -32,7 +30,6 @@ export const BulkIngestReadingSchema = z.object({
   readings: z.array(IngestReadingSchema).min(1).max(500),
 });
 
-// z.coerce converts string query params to the right types automatically.
 export const SensorQuerySchema = z.object({
   limit:    z.coerce.number().int().min(1).max(1000).default(100),
   offset:   z.coerce.number().int().min(0).default(0),
@@ -40,8 +37,6 @@ export const SensorQuerySchema = z.object({
   isActive: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
 });
 
-// Export inferred TypeScript types so services and tests import from here,
-// not from the schema definitions directly.
 export type CreateSensorDto       = z.infer<typeof CreateSensorSchema>;
 export type IngestReadingDto      = z.infer<typeof IngestReadingSchema>;
 export type BulkIngestReadingDto  = z.infer<typeof BulkIngestReadingSchema>;
