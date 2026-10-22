@@ -47,6 +47,11 @@ function buildApp() {
 
   const app = express();
 
+  // sensor_readings.id is a BIGINT, which JSON.stringify can't handle natively.
+  app.set('json replacer', (_key: string, value: unknown) =>
+    typeof value === 'bigint' ? value.toString() : value,
+  );
+
   // 1 MB covers a batch of ~500 IoT readings; cap it here before the rate
   // limiter so oversized payloads don't exhaust heap memory.
   app.use(express.json({ limit: '1mb' }));
@@ -63,14 +68,8 @@ function buildApp() {
   app.use('/api/v1/weather',    buildWeatherRouter(weatherService));
   app.use('/api/v1/schedules',  buildScheduleRouter(scheduleService));
 
-  // Serve the monitoring dashboard as a static HTML file.
-  // Must come AFTER API routes so /dashboard doesn’t shadow any future
-  // API endpoint, and BEFORE globalErrorHandler so 404s are handled correctly.
-  // Serving via Express (not file://) gives the page a real HTTP origin,
-  // which means browser CORS rules work normally for all fetch() calls.
-  app.get('/dashboard', (_req, res) => {
-    res.sendFile(path.resolve(__dirname, '..', 'dashboard.html'));
-  });
+  // Dashboard (public/index.html) is served from the same origin as the API.
+  app.use(express.static(path.resolve(__dirname, '..', 'public')));
 
   // Error handler must be last — Express identifies it by the 4-arg signature.
   app.use(globalErrorHandler);

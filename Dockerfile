@@ -1,26 +1,29 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
+# Prisma's query engine needs OpenSSL on Alpine
+RUN apk add --no-cache openssl
 
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci --only=production
+COPY prisma ./prisma
+RUN npm ci --omit=dev && npx prisma generate
 
 FROM base AS build
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npx prisma generate
-RUN npm run build
+RUN npx prisma generate && npm run build
 
 FROM base AS runtime
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY prisma ./prisma
+COPY public ./public
 
 RUN mkdir -p logs && chown node:node logs
 USER node
 
 EXPOSE 3000
-CMD ["node", "dist/index.js"]
+# Apply any pending migrations, then start the API
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/index.js"]
