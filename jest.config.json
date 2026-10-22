@@ -1,0 +1,21 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "transform": {
+    "^.+\\.tsx?$": ["ts-jest", { "tsconfig": "tsconfig.test.json" }]
+  },
+  "roots": ["<rootDir>/tests"],
+  "testMatch": ["**/*.test.ts"],
+  "moduleNameMapper": {
+    "@modules/(.*)": "<rootDir>/src/modules/$1",
+    "@infrastructure/(.*)": "<rootDir>/src/infrastructure/$1",
+    "@shared/(.*)": "<rootDir>/src/shared/$1"
+  },
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/index.ts",
+    "!src/generated/**"
+  ],
+  "coverageDirectory": "coverage",
+  "coverageReporters": ["text", "lcov"]
+}

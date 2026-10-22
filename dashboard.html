@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IrrigationDB — Prisma Dashboard</title>
+<style>
+  :root {
+    --bg:      #0b0f1a;
+    --panel:   #111827;
+    --border:  #1e2d40;
+    --accent:  #0ea5e9;
+    --cyan:    #06b6d4;
+    --green:   #22c55e;
+    --yellow:  #eab308;
+    --red:     #ef4444;
+    --orange:  #f97316;
+    --purple:  #a78bfa;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Courier New', monospace; font-size: 13px;
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    background: #0d1b2a; border-bottom: 1px solid var(--border);
+    padding: 10px 20px; display: flex;
+    justify-content: space-between; align-items: center; flex-shrink: 0;
+  }
+  header h1 { font-size: 14px; letter-spacing: 2px; }
+  .header-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .badge {
+    display: flex; align-items: center; gap: 5px; font-size: 10px;
+    padding: 3px 9px; border: 1px solid var(--border); border-radius: 3px; background: #0d1b2a;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green  { background: var(--green);  box-shadow: 0 0 6px var(--green);  animation: pulse 2s infinite; }
+  .dot-blue   { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2.5s infinite; }
+  .dot-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1.8s infinite; }
+  .dot-red    { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+  .dot-muted  { background: var(--muted); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  /* GRID */
+  .grid {
+    flex: 1; display: grid;
+    grid-template-columns: 210px 1fr 280px;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px; background: var(--border); overflow: hidden;
+  }
+  .panel {
+    background: var(--panel); padding: 14px; overflow: hidden;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .panel-title {
+    font-size: 9.5px; letter-spacing: 2px; color: var(--muted);
+    text-transform: uppercase; border-bottom: 1px solid var(--border);
+    padding-bottom: 7px; flex-shrink: 0; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .live-blink { color: var(--accent); animation: blink 1.4s step-end infinite; }
+  @keyframes blink { 50%{ opacity:0 } }
+  .src-badge {
+    font-size: 9px; padding: 1px 6px; border-radius: 2px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--bg); white-space: nowrap;
+  }
+  .src-live  { border-color: var(--green);  color: var(--green);  background: #052e16; }
+  .src-local { border-color: var(--accent); color: var(--accent); background: #0c1f2e; }
+
+  /* METRICS */
+  .metrics-panel { grid-row: span 2; }
+  .metric-block { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .metric-block:last-child { border-bottom: none; }
+  .metric-label { font-size: 8.5px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+  .metric-value { font-size: 22px; font-weight: bold; letter-spacing: -1px; line-height: 1; color: var(--accent); }
+  .metric-value.green  { color: var(--green); }
+  .metric-value.yellow { color: var(--yellow); }
+  .metric-sub { font-size: 9.5px; color: var(--muted); margin-top: 3px; }
+  .weather-row { display: flex; gap: 5px; }
+  .w-chip {
+    flex: 1; padding: 5px 6px; background: #0a1628;
+    border: 1px solid var(--border); border-radius: 3px;
+  }
+  .w-val  { font-size: 15px; font-weight: bold; color: var(--text); line-height: 1; }
+  .w-lbl  { font-size: 8px; color: var(--muted); margin-top: 2px; }
+  .w-src  { font-size: 7.5px; color: var(--cyan); }
+  .ok     { color: var(--green); }
+  .warn   { color: var(--yellow); }
+  .storage-bar-bg   { background: var(--border); border-radius: 2px; height: 4px; margin-top: 5px; }
+  .storage-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); width: 0; transition: width 1.5s ease; }
+  .schema-table { width: 100%; border-collapse: collapse; margin-top: 3px; }
+  .schema-table td { padding: 2px 0; font-size: 10px; color: var(--muted); }
+  .schema-table td:first-child { color: var(--cyan); }
+  .schema-table td:last-child  { text-align: right; color: var(--text); }
+
+  /* LIVE SENSOR READINGS TABLE */
+  .sensor-readings-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .sensor-readings-table th {
+    font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); text-align: left; padding: 2px 3px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sensor-readings-table td { font-size: 10px; padding: 3px 3px; border-bottom: 1px solid #0d1b2a; }
+  .sensor-readings-table tr:last-child td { border-bottom: none; }
+  .sr-serial { color: var(--cyan); font-size: 9px; }
+  .sr-value  { color: var(--text); font-weight: bold; text-align: right; }
+  .sr-unit   { color: var(--muted); font-size: 8.5px; padding-left: 2px; }
+  .sr-age    { color: var(--muted); font-size: 8.5px; text-align: right; }
+  .sr-ok     { color: var(--green); font-size: 8px; text-align: center; }
+  .sr-anomaly{ color: var(--red);   font-size: 8px; text-align: center; }
+
+  /* CHART */
+  .chart-panel { position: relative; }
+  .zone-tabs { display: flex; gap: 4px; flex-shrink: 0; }
+  .zone-tab {
+    padding: 3px 8px; font-size: 10px; border-radius: 3px; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all .2s;
+  }
+  .zone-tab.active { border-color: var(--accent); color: var(--accent); background: #0c2a3d; }
+  .chart-loading { text-align: center; padding: 20px; color: var(--muted); flex: 1; }
+  .chart-wrapper { flex: 1; position: relative; min-height: 0; }
+  .chart-area {
+    position: absolute; inset: 0; display: flex;
+    align-items: flex-end; gap: 4px; padding: 0;
+  }
+  .threshold-line {
+    position: absolute; left: 0; right: 0; height: 1px;
+    border-top: 1px dashed var(--orange); pointer-events: none;
+  }
+  .threshold-label {
+    font-size: 8px; color: var(--orange); padding: 0 3px;
+    background: var(--panel); margin-top: -9px; display: inline-block;
+  }
+  .bar-wrap { flex: 1; display: flex; height: 100%; justify-content: flex-end; align-items: flex-end; }
+  .bar-outer { width: 100%; position: relative; overflow: hidden; border-radius: 2px 2px 0 0; }
+  .bar-inner {
+    width: 100%; position: absolute; bottom: 0; left: 0;
+    border-radius: 2px 2px 0 0; transition: height .7s cubic-bezier(.4,0,.2,1);
+  }
+  .b-good .bar-inner { background: linear-gradient(to top, #166534, var(--green)); }
+  .b-warn .bar-inner { background: linear-gradient(to top, #713f12, var(--yellow)); }
+  .b-dry  .bar-inner { background: linear-gradient(to top, #7f1d1d, var(--red)); }
+  .chart-legend { display: flex; gap: 10px; font-size: 9px; color: var(--muted); flex-shrink: 0; flex-wrap: wrap; }
+  .chart-legend span { display: flex; align-items: center; gap: 4px; }
+  .leg-dot { width: 8px; height: 8px; border-radius: 1px; }
+
+  /* LOG */
+  .log-panel { grid-row: span 2; }
+  .log-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+  .log-scroll::-webkit-scrollbar { width: 3px; }
+  .log-scroll::-webkit-scrollbar-thumb { background: var(--border); }
+  .log-entry {
+    padding: 3px 0; border-bottom: 1px solid #131c28;
+    display: flex; gap: 5px; font-size: 10px; line-height: 1.5;
+    animation: fadeIn .3s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:none} }
+  .log-ts { color: var(--accent); min-width: 52px; flex-shrink: 0; }
+  .log-op { min-width: 65px; flex-shrink: 0; }
+  .op-insert  { color: var(--green); }
+  .op-update  { color: var(--cyan); }
+  .op-select  { color: var(--purple); }
+  .op-fetch   { color: var(--yellow); }
+  .op-trigger { color: var(--orange); }
+  .op-backup  { color: var(--muted); }
+  .log-detail { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log-ok  { color: var(--green); flex-shrink: 0; }
+  .log-err { color: var(--red);   flex-shrink: 0; }
+
+  /* BOTTOM CENTER */
+  .bottom-center { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); padding: 0; }
+  .query-display {
+    background: #0a1628; border: 1px solid var(--border); border-radius: 3px;
+    padding: 8px 10px; font-size: 10.5px; color: var(--muted); line-height: 1.7; white-space: pre;
+  }
+  .q-kw  { color: #7dd3fc; }
+  .q-tbl { color: var(--cyan); }
+  .q-val { color: #86efac; }
+  .perf-row { display: flex; align-items: center; gap: 8px; }
+  .perf-ms { font-size: 18px; font-weight: bold; min-width: 55px; transition: color .5s; }
+  .perf-ms.slow { color: var(--yellow); }
+  .perf-ms.fast { color: var(--green); }
+  .bar-track { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .bar-perf { height: 100%; border-radius: 4px; transition: width .8s ease, background .5s; }
+  .bar-perf.slow { background: var(--yellow); }
+  .bar-perf.fast { background: var(--green); }
+  .btn-idx {
+    padding: 5px 12px; font-size: 10px; letter-spacing: 1px; font-family: inherit;
+    background: var(--green); color: #000; border: none; border-radius: 3px; cursor: pointer;
+    font-weight: bold; text-transform: uppercase; white-space: nowrap;
+  }
+  .btn-idx.done { background: var(--muted); color: var(--text); cursor: default; }
+  .idx-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 2px;
+    font-size: 9.5px; border: 1px solid var(--border); color: var(--muted); background: var(--bg);
+  }
+  .idx-badge.on { border-color: var(--green); color: var(--green); background: #052e16; }
+  .entity-card {
+    background: #0a1628; border: 1px solid var(--border); border-radius: 3px;
+    padding: 6px 9px; transition: border-color .2s;
+  }
+  .entity-card:hover { border-color: var(--accent); }
+  .entity-name { color: var(--cyan); font-size: 10.5px; font-weight: bold; }
+  .entity-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
+  .etag { padding: 1px 5px; border-radius: 2px; font-size: 8.5px; border: 1px solid var(--border); }
+  .etag-idx { border-color: var(--purple); color: var(--purple); }
+  .etag-fk  { border-color: var(--accent);  color: var(--accent); }
+  .etag-hot { border-color: var(--yellow);  color: var(--yellow); }
+  .etag-tx  { border-color: var(--purple);  color: var(--purple); }
+
+  footer {
+    background: #0d1b2a; border-top: 1px solid var(--border);
+    padding: 5px 18px; display: flex; gap: 18px; font-size: 9.5px; color: var(--muted);
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  #footerTime { margin-left: auto; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⬡ IrrigationDB — Prisma Dashboard</h1>
+  <div class="header-right">
+    <div class="badge"><div class="dot dot-blue"></div> Prisma ORM: v6.19.3</div>
+    <div class="badge" id="localBadge"><div class="dot dot-muted"></div><span>Local API: OFFLINE</span></div>
+    <div class="badge" id="meteoBadge"><div class="dot dot-yellow"></div><span>Open-Meteo: FETCHING…</span></div>
+    <div class="badge"><div class="dot dot-green"></div><span id="locationLabel">—</span></div>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- COL 1 · METRICS (span 2 rows) -->
+  <div class="panel metrics-panel">
+    <div class="panel-title">SYSTEM METRICS</div>
+
+    <div class="metric-block">
+      <div class="metric-label">Daily Sensor Readings</div>
+      <div class="metric-value" id="readingCount">—</div>
+      <div class="metric-sub" id="readingSource">connecting…</div>
+    </div>
+
+    <div class="metric-block">
+      <div class="metric-label">Anomaly Rate (24 h)</div>
+      <div class="metric-value yellow" id="anomalyRate">—</div>
+      <div class="metric-sub">is_anomaly = true</div>
+    </div>
+
+    <!-- REAL WEATHER — Open-Meteo, no API key -->
+    <div class="metric-block">
+      <div class="metric-label">
+        Live Weather <span class="src-badge" id="weatherBadge">FETCHING</span>
+      </div>
+      <!-- Row 1: temp + humidity -->
+      <div class="weather-row" style="margin-bottom:5px">
+        <div class="w-chip">
+          <div class="w-val" id="wTemp">—</div>
+          <div class="w-lbl">Temp °C</div>
+          <div class="w-src">temperature_2m</div>
+        </div>
+        <div class="w-chip">
+          <div class="w-val" id="wHumid">—</div>
+          <div class="w-lbl">Humidity %</div>
+          <div class="w-src">relative_humidity_2m</div>
+        </div>
+      </div>
+      <!-- Row 2: precip + ET0 -->
+      <div class="weather-row">
+        <div class="w-chip">
+          <div class="w-val" id="wPrecip">—</div>
+          <div class="w-lbl" id="wPrecipLbl">Precip 24h mm</div>
+          <div class="w-src">Σ precipitation</div>
+        </div>
+        <div class="w-chip">
+          <div class="w-val" id="wEt0">—</div>
+          <div class="w-lbl">ET₀ 24h mm</div>
+          <div class="w-src">et0_fao_evapotranspiration</div>
+        </div>
+      </div>
+      <!-- Maps directly to WeatherSnapshot model in schema.prisma -->
+      <div style="font-size:8px;color:var(--muted);margin-top:4px">
+        → weather_snapshots.precipitation_mm / .et0_mm
+        &nbsp;&nbsp;<span id="wUpdated" style="color:var(--cyan)"></span>
+      </div>
+    </div>
+
+    <div class="metric-block">
+      <div class="metric-label">Auto-Irrigation</div>
+      <div class="metric-value green" id="irrigStatus">Active</div>
+      <div class="metric-sub" id="irrigSub">SENSOR_THRESHOLD trigger</div>
+    </div>
+
+    <div class="metric-block">
+      <div class="metric-label">Storage Used</div>
+      <div class="metric-value" style="font-size:16px">50 GB / 1 TB</div>
+      <div class="storage-bar-bg"><div class="storage-bar-fill" id="storageBar"></div></div>
+    </div>
+
+    <div class="metric-block" style="flex:1;min-height:0;overflow:hidden">
+      <div class="metric-label">
+        Prisma Schema <span class="src-badge" id="schemaBadge">STATIC</span>
+      </div>
+      <table class="schema-table">
+        <tr><td>zones</td><td id="sZones">3</td></tr>
+        <tr><td>sensors</td><td id="sSensors">8</td></tr>
+        <tr><td>sensor_readings</td><td id="sReadings">104,246</td></tr>
+        <tr><td>weather_snapshots</td><td id="sWeather">720</td></tr>
+        <tr><td>irrigation_events</td><td id="sIrrigation">9</td></tr>
+        <tr><td>schedules</td><td id="sSchedules">6</td></tr>
+      </table>
+    </div>
+
+    <!-- LIVE SENSOR READINGS — populated by probeLocalApi() when API is online -->
+    <div class="metric-block" style="flex:1;min-height:0;overflow:auto">
+      <div class="metric-label">
+        Latest Sensor Values <span class="src-badge src-local" id="sensorTableBadge" style="display:none">LIVE API</span>
+      </div>
+      <table class="sensor-readings-table" id="sensorReadingsTable">
+        <thead>
+          <tr>
+            <th>Sensor</th>
+            <th>Type</th>
+            <th style="text-align:right">Value</th>
+            <th style="text-align:right">Age</th>
+            <th style="text-align:center">OK?</th>
+          </tr>
+        </thead>
+        <tbody id="sensorReadingsTbody">
+          <tr><td colspan="5" style="color:var(--muted);font-size:9px;padding:4px 0">
+            Waiting for local API…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COL 2 ROW 1 · SOIL MOISTURE CHART (real Open-Meteo soil_moisture_* data) -->
+  <div class="panel chart-panel">
+    <div class="panel-title">
+      <span>SOIL MOISTURE — sensor_readings</span>
+      <span class="src-badge src-live" id="chartBadge">Open-Meteo / soil_moisture_*</span>
+    </div>
+    <div class="zone-tabs" id="zoneTabs">
+      <button class="zone-tab active" data-zone="0">North Field (0–1 cm)</button>
+      <button class="zone-tab" data-zone="1">Greenhouse A (1–3 cm)</button>
+      <button class="zone-tab" data-zone="2">Orchard B3 (3–9 cm)</button>
+    </div>
+    <div class="chart-loading" id="chartLoading">⟳ Fetching Open-Meteo soil moisture data…</div>
+    <div class="chart-wrapper" id="chartWrapper" style="display:none">
+      <div class="chart-area" id="chartArea"></div>
+      <div class="threshold-line" id="threshLine">
+        <span class="threshold-label">30% VWC threshold (MOISTURE_THRESHOLD_PCT)</span>
+      </div>
+    </div>
+    <div class="chart-legend">
+      <span><div class="leg-dot" style="background:var(--green)"></div>≥30% irrigated</span>
+      <span><div class="leg-dot" style="background:var(--yellow)"></div>15–30% water soon</span>
+      <span><div class="leg-dot" style="background:var(--red)"></div>&lt;15% trigger</span>
+      <span id="avgLabel" style="margin-left:auto;font-size:9.5px;color:var(--cyan)"></span>
+    </div>
+  </div>
+
+  <!-- COL 3 · TRANSACTION LOG (span 2 rows) -->
+  <div class="panel log-panel">
+    <div class="panel-title">SQL TRANSACTION LOG <span class="src-badge" style="border-color:#475569">SIMULATED</span> <span class="live-blink">● TICKING</span></div>
+    <div class="log-scroll" id="logScroll"></div>
+  </div>
+
+  <!-- COL 2 ROW 2 · PROFILER + SCHEMA MAP -->
+  <div class="bottom-center">
+
+    <!-- QUERY PROFILER -->
+    <div class="panel" style="gap:8px">
+      <div class="panel-title">QUERY PROFILER <span class="src-badge" style="border-color:#475569">ILLUSTRATIVE</span></div>
+      <div style="font-size:9px;color:var(--muted)">Current query:</div>
+      <div class="query-display" id="queryDisplay"></div>
+      <div class="perf-row">
+        <div class="perf-ms slow" id="perfMs">—</div>
+        <div class="bar-track"><div class="bar-perf slow" id="perfBar" style="width:0"></div></div>
+        <button class="btn-idx" id="idxBtn" onclick="applyIdx()">APPLY INDEX</button>
+      </div>
+      <div style="font-size:9.5px;color:var(--muted)" id="profHint">Click to simulate composite index optimization.</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px">Active indexes:</div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <div class="idx-badge">idx_sensors_zone_id</div>
+        <div class="idx-badge">idx_sensors_type_active</div>
+        <div class="idx-badge">idx_readings_recorded_at</div>
+        <div class="idx-badge" id="compIdx">idx_readings_sensor_id_recorded_at</div>
+      </div>
+    </div>
+
+    <!-- SCHEMA MAP -->
+    <div class="panel" style="gap:8px">
+      <div class="panel-title">PRISMA SCHEMA — ENTITY MAP</div>
+      <div style="display:flex;flex-direction:column;gap:5px;flex:1;overflow-y:auto;min-height:0">
+        <div class="entity-card">
+          <div class="entity-name">Zone</div>
+          <div class="entity-tags">
+            <span class="etag etag-fk">→ Sensor[]</span>
+            <span class="etag etag-fk">→ IrrigationEvent[]</span>
+            <span class="etag etag-fk">→ Schedule[]</span>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-name">Sensor</div>
+          <div class="entity-tags">
+            <span class="etag etag-idx">idx(zoneId)</span>
+            <span class="etag etag-idx">idx(type, isActive)</span>
+            <span class="etag etag-fk">→ SensorReading[]</span>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-name">SensorReading <small style="color:var(--yellow)">HOT</small></div>
+          <div class="entity-tags">
+            <span class="etag etag-hot">idx(sensorId, recordedAt↓)</span>
+            <span class="etag etag-idx">idx(recordedAt)</span>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-name">IrrigationEvent</div>
+          <div class="entity-tags">
+            <span class="etag etag-idx">idx(zoneId, startedAt↓)</span>
+            <span class="etag etag-idx">idx(status)</span>
+            <span class="etag etag-tx">SERIALIZABLE tx</span>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-name">WeatherSnapshot</div>
+          <div class="entity-tags">
+            <span class="etag etag-idx">idx(recordedAt↓)</span>
+            <span class="etag" style="border-color:var(--muted);color:var(--muted)">ETo stored</span>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-name">Schedule</div>
+          <div class="entity-tags">
+            <span class="etag etag-idx">idx(zoneId, isEnabled)</span>
+            <span class="etag" style="border-color:var(--muted);color:var(--muted)">cron expr</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <span>⬡ DATABASE: irrigation_db</span>
+  <span>⬡ Prisma v6.19.3 / PostgreSQL 16</span>
+  <span>⬡ Weather: Open-Meteo API (no API key)</span>
+  <span id="coordSpan"></span>
+  <span id="footerTime" style="margin-left:auto"></span>
+</footer>
+
+<script>
+// config — edit lat/lon/timezone to match your field location
+const CFG = {
+  lat: 42.6977, // change to your field coordinates
+  lon: 23.3219,
+  timezone: 'Europe/Sofia',
+  location: 'Sofia, BG',
+  localApi: 'http://localhost:3000',
+  moistureThreshold: 30, // keep in sync with MOISTURE_THRESHOLD_PCT
+  precipThreshold: 5,    // keep in sync with hasSufficientRecentPrecipitation
+  anomalyMin: 0,
+};
+
+// Open-Meteo soil moisture layers — m³/m³, multiply × 100 for % VWC
+const ZONES = [
+  { label: 'North Field', field: 'soil_moisture_0_to_1cm', sensor: 'SM-NF-001', depth: '0–1 cm' },
+  { label: 'Greenhouse A', field: 'soil_moisture_1_to_3cm', sensor: 'SM-GHA-001', depth: '1–3 cm' },
+  { label: 'Orchard B3', field: 'soil_moisture_3_to_9cm', sensor: 'SM-OB3-001', depth: '3–9 cm' },
+];
+
+let meteo = null; // raw Open-Meteo response
+let validSlice = []; // last 30 valid hourly indices
+let currentZone = 0;
+let readingCount = 104246; // hardcoded from seed.ts, replace with real count endpoint
+
+// https://open-meteo.com/en/docs — free tier, no API key
+async function fetchOpenMeteo() {
+  // try proxy first — avoids CORS null-origin block when page is opened as file://
+  try {
+    const proxyUrl =
+      `${CFG.localApi}/api/v1/weather/external` +
+      `?lat=${CFG.lat}&lon=${CFG.lon}` +
+      `&timezone=${encodeURIComponent(CFG.timezone)}&past_days=7`;
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 4000);
+    const r = await fetch(proxyUrl, { signal: ctrl.signal });
+    if (r.ok) return r.json();
+  } catch { /* server not running */ }
+
+  // direct fetch — works over HTTP, fails on file:// due to CORS null-origin
+  const directUrl =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${CFG.lat}&longitude=${CFG.lon}` +
+    `&hourly=soil_moisture_0_to_1cm,soil_moisture_1_to_3cm,soil_moisture_3_to_9cm` +
+    `,precipitation,temperature_2m,relative_humidity_2m,et0_fao_evapotranspiration` +
+    `&past_days=7&forecast_days=1&timezone=${CFG.timezone}`;
+  const res = await fetch(directUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+function processMeteo(data) {
+  meteo = data;
+  const h   = data.hourly;
+  const now = Date.now();
+
+  // Keep only past hours that have non-null soil moisture readings
+  const allValid = h.time
+    .map((t, i) => ({ ts: new Date(t).getTime(), i }))
+    .filter(({ ts, i }) => ts <= now && h.soil_moisture_0_to_1cm[i] !== null);
+
+  validSlice = allValid.slice(-30);
+
+  const last = allValid[allValid.length - 1];
+  if (last) {
+    const li = last.i;
+    const lastTimeStr = new Date(h.time[li]).toLocaleString(undefined, {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    setTxt('wTemp', h.temperature_2m[li] !== null ? h.temperature_2m[li].toFixed(1) : '—');
+    setTxt('wHumid', h.relative_humidity_2m[li] !== null ? h.relative_humidity_2m[li].toFixed(0) : '—');
+
+    const last24i = allValid.slice(-24).map(x => x.i);
+    const precip24 = last24i.reduce((s, i) => s + (h.precipitation[i] || 0), 0);
+    const precipEl = document.getElementById('wPrecip');
+    precipEl.textContent = precip24.toFixed(1);
+    const precipOk = precip24 >= CFG.precipThreshold;
+    precipEl.className = 'w-val ' + (precipOk ? 'ok' : 'warn');
+    setTxt('wPrecipLbl', precipOk ? 'Precip 24h mm ✓ OK' : 'Precip 24h mm ⚠ LOW');
+
+    const et024 = last24i.reduce((s, i) => s + (h.et0_fao_evapotranspiration[i] || 0), 0);
+    setTxt('wEt0', et024.toFixed(2));
+
+    const wUpdatedEl = document.getElementById('wUpdated');
+    if (wUpdatedEl) wUpdatedEl.textContent = `as of ${lastTimeStr}`;
+
+    if (precipOk) {
+      setTxt('irrigStatus', 'Weather Skip');
+      document.getElementById('irrigStatus').className = 'metric-value yellow';
+      setTxt('irrigSub', `precip ${precip24.toFixed(1)}mm ≥ 5mm threshold`);
+    }
+  }
+
+  setAttr('weatherBadge', 'className', 'src-badge src-live');
+  setTxt('weatherBadge', 'LIVE');
+  setBadge('meteoBadge', 'green', `Open-Meteo: ${CFG.location}`);
+
+  const t = fmtTs(new Date());
+  addLog(t, 'op-fetch', 'FETCH', 'api.open-meteo.com/v1/forecast', true);
+  addLog(t, 'op-insert', 'INSERT', `weather_snapshots (${validSlice.length} rows synced)`, true);
+  addLog(t, 'op-select', 'SELECT', 'sensor_readings WHERE type=SOIL_MOISTURE', true);
+  addLog(t, 'op-update', 'UPDATE', 'zones SET last_weather_sync = NOW()', true);
+
+  document.getElementById('chartLoading').style.display = 'none';
+  document.getElementById('chartWrapper').style.display = '';
+  buildChart(currentZone);
+}
+
+function barClass(vwc) {
+  if (vwc < 15) return 'b-dry';
+  if (vwc < CFG.moistureThreshold) return 'b-warn';
+  return 'b-good';
+}
+
+function buildChart(zoneIdx) {
+  if (!meteo || !validSlice.length) return;
+  const zone = ZONES[zoneIdx];
+  const area = document.getElementById('chartArea');
+  const outerH = area.clientHeight || 120;
+
+  // Convert m³/m³ → % VWC
+  const values = validSlice.map(({ i }) =>
+    (meteo.hourly[zone.field][i] ?? 0) * 100
+  );
+  const times = validSlice.map(({ i }) => meteo.hourly.time[i]);
+
+  // Dynamic scale with 10% headroom, minimum 60%
+  const maxVWC = Math.max(60, Math.max(...values) * 1.1);
+
+  area.innerHTML = '';
+
+  values.forEach((vwc, idx) => {
+    const barH = Math.max(2, Math.round((outerH * (vwc / maxVWC) * 100) / 100));
+    const cls  = barClass(vwc);
+    const tsFormatted = new Date(times[idx]).toLocaleString(undefined, {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const wrap  = document.createElement('div');
+    wrap.className = 'bar-wrap ' + cls;
+
+    const outer = document.createElement('div');
+    outer.className = 'bar-outer';
+    outer.style.height = outerH + 'px';
+    outer.title =
+      `${tsFormatted}\n` +
+      `Moisture: ${vwc.toFixed(2)}% VWC\n` +
+      `Status: ${vwc < 15 ? '🔴 DRY — irrigation trigger' : vwc < 30 ? '🟡 LOW — water soon' : '🟢 OK'}\n` +
+      `Sensor: ${zone.sensor}  Depth: ${zone.depth}\n` +
+      `Source: Open-Meteo ${zone.field}`;
+
+    const inner = document.createElement('div');
+    inner.className = 'bar-inner';
+    inner.style.height = '0';
+
+    outer.appendChild(inner);
+    wrap.appendChild(outer);
+    area.appendChild(wrap);
+
+    setTimeout(() => { inner.style.height = barH + 'px'; }, 25 + idx * 12);
+  });
+
+  const lineBottom = Math.round((outerH * CFG.moistureThreshold) / maxVWC);
+  const line = document.getElementById('threshLine');
+  line.style.bottom = lineBottom + 'px';
+  line.style.top    = 'auto';
+
+  const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+  const minVwc = Math.min(...values).toFixed(1);
+  const maxVwc = Math.max(...values).toFixed(1);
+  const lastTs = times[times.length - 1]
+    ? new Date(times[times.length - 1]).toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    : '';
+  setTxt('avgLabel', `avg ${avg}% · min ${minVwc}% · max ${maxVwc}% VWC · ${zone.sensor} · updated ${lastTs}`);
+}
+
+// simulated chart jitter — not real data, remove to freeze on Open-Meteo values
+setInterval(() => {
+  if (!meteo || !validSlice.length) return;
+  const area = document.getElementById('chartArea');
+  const bars = area.querySelectorAll('.bar-inner');
+  if (!bars.length) return;
+  const outerH = area.clientHeight || 120;
+  const field  = ZONES[currentZone].field;
+  const ri     = Math.floor(Math.random() * bars.length);
+  const raw    = (meteo.hourly[field][validSlice[ri].i] ?? 0) * 100;
+  const jitter = (Math.random() - 0.5) * 1.6;
+  const vwc    = Math.max(CFG.anomalyMin + 0.1, raw + jitter);
+  const maxVWC = 66;
+  const barH   = Math.max(2, Math.round((outerH * (vwc / maxVWC) * 100) / 100));
+  bars[ri].style.height = barH + 'px';
+}, 2200);
+
+document.getElementById('zoneTabs').addEventListener('click', e => {
+  if (!e.target.matches('.zone-tab')) return;
+  document.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
+  e.target.classList.add('active');
+  currentZone = parseInt(e.target.dataset.zone);
+  if (meteo) buildChart(currentZone);
+});
+
+async function probeLocalApi() {
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 2500);
+    const r = await fetch(`${CFG.localApi}/health`, { signal: ctrl.signal });
+    if (!r.ok) throw new Error('not ok');
+
+    setBadge('localBadge', 'green', 'Local API: ONLINE');
+    setAttr('schemaBadge', 'className', 'src-badge src-local');
+    setTxt('schemaBadge', 'LIVE API');
+
+    const ctrl2 = new AbortController();
+    setTimeout(() => ctrl2.abort(), 3000);
+    const [zonesRes, sensorsRes] = await Promise.all([
+      fetch(`${CFG.localApi}/api/v1/zones`,   { signal: ctrl2.signal }).then(r => r.json()).catch(() => null),
+      fetch(`${CFG.localApi}/api/v1/sensors`, { signal: ctrl2.signal }).then(r => r.json()).catch(() => null),
+    ]);
+
+    const zones = zonesRes?.data;
+    const sensors = sensorsRes?.data;
+    if (Array.isArray(zones)) setTxt('sZones', zones.length);
+    if (Array.isArray(sensors)) setTxt('sSensors', sensors.length);
+
+    const t = fmtTs(new Date());
+    addLog(t, 'op-select', 'QUERY', `GET /api/v1/zones → ${Array.isArray(zones) ? zones.length : '?'} rows`, true);
+    addLog(t, 'op-select', 'QUERY', `GET /api/v1/sensors → ${Array.isArray(sensors) ? sensors.length : '?'} rows`, true);
+    setTxt('readingSource', `Live — ${CFG.localApi}`);
+
+    if (Array.isArray(sensors) && sensors.length > 0) {
+      await loadSensorReadings(sensors);
+    }
+  } catch {
+    setBadge('localBadge', 'muted', 'Local API: OFFLINE');
+  }
+}
+
+async function loadSensorReadings(sensors) {
+  const UNITS = {
+    SOIL_MOISTURE: '%VWC',
+    TEMPERATURE: '°C',
+    FLOW_RATE: 'L/min',
+    PH: 'pH',
+    RAIN_GAUGE: 'mm',
+  };
+
+  const rows = await Promise.all(sensors.map(async (sensor) => {
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch(
+        `${CFG.localApi}/api/v1/sensors/${sensor.id}/readings?limit=1`,
+        { signal: ctrl.signal }
+      );
+      const json = await res.json();
+      const reading = json?.data?.[0];
+      return { sensor, reading };
+    } catch {
+      return { sensor, reading: null };
+    }
+  }));
+
+  const tbody = document.getElementById('sensorReadingsTbody');
+  tbody.innerHTML = '';
+
+  rows.forEach(({ sensor, reading }) => {
+    const unit = UNITS[sensor.type] ?? '';
+    const value = reading?.value;
+    const isAnomaly = reading?.isAnomaly ?? false;
+
+    const displayValue = value != null
+      ? (unit === 'pH' ? value.toFixed(2) : Number(value).toFixed(2))
+      : '—';
+
+    const age = reading?.recordedAt
+      ? fmtAge(new Date(reading.recordedAt))
+      : '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td class="sr-serial">${sensor.serialNumber}</td>` +
+      `<td style="color:var(--muted);font-size:8.5px">${sensor.type.replace('_', ' ')}</td>` +
+      `<td class="sr-value">${displayValue}<span class="sr-unit">${unit}</span></td>` +
+      `<td class="sr-age">${age}</td>` +
+      `<td class="${isAnomaly ? 'sr-anomaly' : 'sr-ok'}">${isAnomaly ? '⚠' : '✓'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const badge = document.getElementById('sensorTableBadge');
+  if (badge) badge.style.display = '';
+}
+
+function fmtAge(date) {
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1)  return 'just now';
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH   < 24) return `${diffH} h ago`;
+  return `${Math.floor(diffH / 24)} d ago`;
+}
+
+// transaction log data — real API events + simulated DB ops
+const SIM = [
+  { cls: 'op-insert', op: 'INSERT', msgs: [
+    'sensor_readings (SM-NF-001, SOIL_MOISTURE)',
+    'sensor_readings (SM-GHA-001, SOIL_MOISTURE)',
+    'sensor_readings (SM-OB3-001, SOIL_MOISTURE)',
+    'sensor_readings (FLOW-NF-001, WATER_FLOW)',
+  ]},
+  { cls: 'op-update', op: 'UPDATE', msgs: [
+    'irrigation_events SET status=COMPLETED',
+    'schedules SET is_enabled=true',
+    'sensors SET last_seen_at=NOW()',
+    'zones SET area_hectares',
+  ]},
+  { cls: 'op-select', op: 'SELECT', msgs: [
+    'sensor_readings ORDER BY recorded_at DESC LIMIT 100',
+    'zones JOIN sensors WHERE is_active=true',
+    'irrigation_events WHERE status=IN_PROGRESS',
+    'weather_snapshots ORDER BY recorded_at DESC LIMIT 48',
+  ]},
+  { cls: 'op-trigger', op: 'TRIGGER', msgs: [
+    'CHECK_THRESHOLD(zone_north_field)',
+    'CHECK_THRESHOLD(zone_greenhouse_a)',
+    'ANOMALY_SCAN(SM-NF-001)',
+    'INSERT irrigation_events (SENSOR_THRESHOLD)',
+  ]},
+  { cls: 'op-insert', op: 'INSERT', msgs: [
+    'weather_snapshots (temp, humidity, precip, et0)',
+    'irrigation_events (trigger=SCHEDULED)',
+  ]},
+  { cls: 'op-backup', op: 'BACKUP', msgs: [
+    'pg_dump irrigation_db',
+    'wal_archive segment',
+  ]},
+  { cls: 'op-fetch', op: 'FETCH', msgs: [
+    'api.open-meteo.com hourly forecast refresh',
+    'weather_snapshots bulk upsert (24 rows)',
+  ]},
+];
+
+function addLog(ts, cls, op, detail, ok) {
+  const scroll = document.getElementById('logScroll');
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML =
+    `<span class="log-ts">[${ts}]</span>` +
+    `<span class="log-op ${cls}">${op.padEnd(8)}</span>` +
+    `<span class="log-detail">${detail}</span>` +
+    `<span class="${ok ? 'log-ok' : 'log-err'}">${ok ? 'OK' : 'ERR'}</span>`;
+  scroll.prepend(el);
+  while (scroll.children.length > 90) scroll.removeChild(scroll.lastChild);
+}
+
+function addSimLog() {
+  const g   = SIM[Math.floor(Math.random() * SIM.length)];
+  const msg = g.msgs[Math.floor(Math.random() * g.msgs.length)];
+  addLog(fmtTs(new Date()), g.cls, g.op, msg, Math.random() > 0.04);
+}
+
+const QUERIES = [
+  {
+    sql: `<span class="q-kw">SELECT</span> * <span class="q-kw">FROM</span> <span class="q-tbl">sensor_readings</span>
+<span class="q-kw">WHERE</span>  sensor_id = <span class="q-val">'SM-NF-001'</span>
+<span class="q-kw">ORDER BY</span> recorded_at <span class="q-kw">DESC LIMIT</span> <span class="q-val">100</span>`,
+    slowMs: 520, fastMs: 29, idx: 'idx_readings_sensor_id_recorded_at',
+  },
+  {
+    sql: `<span class="q-kw">SELECT</span> AVG(value) <span class="q-kw">FROM</span> <span class="q-tbl">sensor_readings</span>
+<span class="q-kw">WHERE</span>  recorded_at <span class="q-kw">BETWEEN</span> <span class="q-val">$1</span> <span class="q-kw">AND</span> <span class="q-val">$2</span>
+<span class="q-kw">AND</span>    is_anomaly = <span class="q-val">false</span>`,
+    slowMs: 380, fastMs: 44, idx: 'idx_readings_recorded_at',
+  },
+  {
+    sql: `<span class="q-kw">SELECT</span> s.*, z.name <span class="q-kw">FROM</span> <span class="q-tbl">sensors</span> s
+<span class="q-kw">JOIN</span>   <span class="q-tbl">zones</span> z <span class="q-kw">ON</span> z.id = s.zone_id
+<span class="q-kw">WHERE</span>  s.type = <span class="q-val">'SOIL_MOISTURE'</span> <span class="q-kw">AND</span> s.is_active = <span class="q-val">true</span>`,
+    slowMs: 210, fastMs: 18, idx: 'idx_sensors_type_active',
+  },
+];
+
+let qIdx = 0, qApplied = false;
+
+function loadQuery(i) {
+  qApplied = false;
+  const q = QUERIES[i];
+  document.getElementById('queryDisplay').innerHTML = q.sql;
+  setPerf(q.slowMs + 'ms', (q.slowMs / 600) * 100, false);
+  const btn = document.getElementById('idxBtn');
+  btn.textContent = 'APPLY INDEX'; btn.className = 'btn-idx';
+  setTxt('profHint', `Apply index: ${q.idx}`);
+  document.getElementById('compIdx').className = 'idx-badge';
+}
+
+function applyIdx() {
+  if (qApplied) return;
+  qApplied = true;
+  const q = QUERIES[qIdx];
+  setTimeout(() => {
+    setPerf(q.fastMs + 'ms', (q.fastMs / 600) * 100, true);
+    const btn = document.getElementById('idxBtn');
+    btn.textContent = '✓ APPLIED'; btn.className = 'btn-idx done';
+    setTxt('profHint', `↓ ${Math.round((1 - q.fastMs / q.slowMs) * 100)}% latency — seq scan → index scan`);
+    document.getElementById('compIdx').className = 'idx-badge on';
+  }, 180);
+}
+
+function setPerf(label, pct, fast) {
+  const ms = document.getElementById('perfMs');
+  const bar = document.getElementById('perfBar');
+  ms.textContent = label;
+  ms.className = fast ? 'perf-ms fast' : 'perf-ms slow';
+  bar.style.width = pct + '%';
+  bar.className = fast ? 'bar-perf fast' : 'bar-perf slow';
+}
+
+setInterval(() => { qIdx = (qIdx + 1) % QUERIES.length; loadQuery(qIdx); }, 15000);
+
+function setTxt(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+function setAttr(id, attr, v) { const el = document.getElementById(id); if (el) el[attr] = v; }
+
+function setBadge(id, color, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const dot = el.querySelector('.dot');
+  if (dot) dot.className = `dot dot-${color}`;
+  const span = el.querySelector('span');
+  if (span) span.textContent = text;
+}
+
+function fmtTs(d) {
+  return [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+}
+
+function animateCount(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const step = Math.ceil(target / 80);
+  let cur = 0;
+  const iv = setInterval(() => {
+    cur = Math.min(cur + step, target);
+    el.textContent = cur.toLocaleString();
+    if (cur >= target) clearInterval(iv);
+  }, 16);
+}
+
+window.addEventListener('load', async () => {
+  // Location in header + footer
+  setTxt('locationLabel', CFG.location);
+  setTxt('coordSpan', `⬡ ${CFG.lat}°N ${CFG.lon}°E`);
+
+  // Seed transaction log with startup entries
+  const t = fmtTs(new Date());
+  addLog(t, 'op-insert', 'CONNECT',  'PrismaClient.$connect() → PostgreSQL 16', true);
+  addLog(t, 'op-select', 'QUERY',    'SELECT 1 (health check)', true);
+  for (let k = 0; k < 8; k++) addSimLog();
+
+  // Metrics defaults
+  animateCount('readingCount', readingCount);
+  setTxt('readingSource', 'sensor_readings — seed data');
+  setTxt('anomalyRate', '3.1%');
+
+  // Storage bar
+  setTimeout(() => { document.getElementById('storageBar').style.width = '5%'; }, 400);
+
+  // Initial query profiler
+  loadQuery(0);
+
+  // Footer clock
+  const tick = () => setTxt('footerTime', new Date().toISOString().replace('T', ' ').slice(0, 19) + ' local');
+  tick(); setInterval(tick, 1000);
+
+  // Probe local Prisma API — non-blocking, fails silently
+  probeLocalApi();
+
+  try {
+    const data = await fetchOpenMeteo();
+    processMeteo(data);
+  } catch (err) {
+    setBadge('meteoBadge', 'red', 'Open-Meteo: FAILED');
+    setAttr('weatherBadge', 'className', 'src-badge');
+    setAttr('weatherBadge', 'textContent', 'OFFLINE');
+    const fromFile = window.location.protocol === 'file:';
+    setTxt('chartLoading', fromFile
+      ? '⚠ Opened as file:// — browser blocks external fetches from local files.\n\nFix: run  npm run dev  then open  http://localhost:3000/dashboard'
+      : `⚠ Fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+    // Metrics stay at default — no hardcoded fallback values shown as live
+  }
+
+  // simulated log ticker — not real queries, remove to stop
+  setInterval(addSimLog, 1400 + Math.random() * 400);
+
+  // fake reading counter — replace with SELECT COUNT(*) on sensor_readings
+  setInterval(() => {
+    readingCount += Math.floor(Math.random() * 3) + 1;
+    document.getElementById('readingCount').textContent = readingCount.toLocaleString();
+    setTxt('sReadings', readingCount.toLocaleString());
+  }, 2100);
+});
+</script>
+</body>
+</html>
