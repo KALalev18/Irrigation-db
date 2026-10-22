@@ -18,6 +18,23 @@ function gaussianRandom(mean: number, stddev: number): number {
   return mean + stddev * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
+// Soil moisture dries out over a few days and jumps back after watering;
+// temperature follows the time of day; everything else is noise around the mean.
+function typicalValue(type: SensorType, mean: number, stddev: number, t: number, seed: number): number {
+  const hours = t / 3_600_000;
+  const dayPhase = Math.sin(((hours % 24) - 9) * (Math.PI / 12));
+
+  if (type === SensorType.SOIL_MOISTURE) {
+    const cycleHours = 60 + seed * 7;
+    const progress = ((hours + seed * 13) % cycleHours) / cycleHours; // 0 just after watering, 1 before
+    return mean + stddev * 1.5 * (1 - 2 * progress) - 1.5 * dayPhase + gaussianRandom(0, stddev * 0.08);
+  }
+  if (type === SensorType.TEMPERATURE) {
+    return mean + stddev * dayPhase + gaussianRandom(0, stddev * 0.15);
+  }
+  return gaussianRandom(mean, stddev);
+}
+
 function jitteredTimestamp(base: Date, intervalMs: number, index: number): Date {
   const drift = (Math.random() - 0.5) * 5000;
   return new Date(base.getTime() + index * intervalMs + drift);
@@ -25,6 +42,15 @@ function jitteredTimestamp(base: Date, intervalMs: number, index: number): Date 
 
 async function main() {
   await prisma.$transaction(async (tx) => {
+    // Start from empty tables so re-running gives a clean 30 days ending now
+    console.log('Clearing existing data...');
+    await tx.sensorReading.deleteMany();
+    await tx.irrigationEvent.deleteMany();
+    await tx.schedule.deleteMany();
+    await tx.weatherSnapshot.deleteMany();
+    await tx.sensor.deleteMany();
+    await tx.zone.deleteMany();
+
     console.log('Seeding zones...');
     const zones = await Promise.all([
       tx.zone.upsert({
@@ -102,7 +128,8 @@ async function main() {
           // Either a negative spike or a value 2x the max
           value = Math.random() < 0.5 ? -Math.random() * 10 : cfg.max * 2 * Math.random();
         } else {
-          value = Math.max(cfg.min, Math.min(cfg.max, gaussianRandom(cfg.baseMean, cfg.stddev)));
+          const t = startDate.getTime() + i * intervalMs;
+          value = Math.max(cfg.min, Math.min(cfg.max, typicalValue(cfg.type, cfg.baseMean, cfg.stddev, t, s)));
         }
 
         readings.push({
@@ -134,7 +161,7 @@ async function main() {
         precipitationMm: parseFloat(Math.max(0, precipitation).toFixed(2)),
         windSpeedMs: parseFloat(Math.max(0, gaussianRandom(3, 2)).toFixed(1)),
         evapotranspirationMm: parseFloat(Math.max(0, gaussianRandom(4.5, 1.5)).toFixed(2)),
-        source: 'FMI-SYNOP-Helsinki',
+        source: 'seed',
       });
     }
     await tx.weatherSnapshot.createMany({ data: weatherReadings });
@@ -151,7 +178,9 @@ async function main() {
 
       // Seed ~3 irrigation events per zone over the seeded period
       for (let d = 0; d < DAYS; d += 10) {
-        const startedAt = new Date(startDate.getTime() + d * 24 * 60 * 60 * 1000 + 6 * 3600 * 1000);
+        // Matches the 06:00 daily schedule
+        const startedAt = new Date(startDate.getTime() + d * 24 * 60 * 60 * 1000);
+        startedAt.setHours(6, 0, 0, 0);
         const duration = 600 + Math.floor(Math.random() * 600);
         await tx.irrigationEvent.create({
           data: {
