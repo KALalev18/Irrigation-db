@@ -27,6 +27,9 @@ import { ZoneRepository } from './modules/zones/zone.repository';
 import { ZoneService } from './modules/zones/zone.service';
 import { buildZoneRouter } from './modules/zones/zone.controller';
 
+import { StatsRepository } from './modules/stats/stats.repository';
+import { buildStatsRouter } from './modules/stats/stats.controller';
+
 function buildApp() {
   // Manual DI — wire each layer: repo → service → router.
   // IrrigationService reaches into SensorRepository directly (cross-module)
@@ -69,6 +72,7 @@ function buildApp() {
   app.use('/api/v1/irrigation', buildIrrigationRouter(irrigationService));
   app.use('/api/v1/weather',    buildWeatherRouter(weatherService));
   app.use('/api/v1/schedules',  buildScheduleRouter(scheduleService));
+  app.use('/api/v1/stats',      buildStatsRouter(new StatsRepository(prisma)));
 
   // Dashboard (public/index.html) is served from the same origin as the API.
   app.use(express.static(path.resolve(__dirname, '..', 'public')));
