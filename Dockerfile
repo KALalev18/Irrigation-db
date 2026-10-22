@@ -6,13 +6,15 @@ RUN apk add --no-cache openssl
 FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev && npx prisma generate
+# postinstall runs prisma generate, so the schema has to be copied first
+RUN npm ci --omit=dev
 
 FROM base AS build
 COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci
 COPY . .
-RUN npx prisma generate && npm run build
+RUN npm run build
 
 FROM base AS runtime
 ENV NODE_ENV=production
