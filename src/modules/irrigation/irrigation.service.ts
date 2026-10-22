@@ -46,7 +46,11 @@ export class IrrigationService {
 
   // Called by the schedule runner before firing a SENSOR_THRESHOLD event.
   // Returns null if conditions don't warrant irrigation (and logs the reason).
-  async evaluateAndTrigger(zoneId: string, moistureSensors: string[]): Promise<IrrigationEvent | null> {
+  async evaluateAndTrigger(
+    zoneId: string,
+    moistureSensors: string[],
+    durationSec = 600,
+  ): Promise<IrrigationEvent | null> {
     if (moistureSensors.length === 0) {
       logger.warn('No moisture sensors configured for zone', { zoneId });
       return null;
@@ -88,7 +92,7 @@ export class IrrigationService {
     return this.irrigationRepo.create({
       zoneId,
       trigger: 'SENSOR_THRESHOLD',
-      durationSec: 600,
+      durationSec,
     });
   }
 }

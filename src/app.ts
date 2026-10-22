@@ -20,6 +20,7 @@ import { buildWeatherRouter } from './modules/weather/weather.controller';
 
 import { ScheduleRepository } from './modules/schedules/schedule.repository';
 import { ScheduleService } from './modules/schedules/schedule.service';
+import { ScheduleRunner } from './modules/schedules/schedule.runner';
 import { buildScheduleRouter } from './modules/schedules/schedule.controller';
 
 import { ZoneRepository } from './modules/zones/zone.repository';
@@ -41,6 +42,7 @@ function buildApp() {
 
   const scheduleRepo = new ScheduleRepository(prisma);
   const scheduleService = new ScheduleService(scheduleRepo);
+  const scheduleRunner = new ScheduleRunner(scheduleRepo, sensorRepo, irrigationService, weatherService);
 
   const zoneRepo = new ZoneRepository(prisma);
   const zoneService = new ZoneService(zoneRepo);
@@ -74,7 +76,7 @@ function buildApp() {
   // Error handler must be last — Express identifies it by the 4-arg signature.
   app.use(globalErrorHandler);
 
-  return app;
+  return { app, scheduleRunner };
 }
 
 export { buildApp };

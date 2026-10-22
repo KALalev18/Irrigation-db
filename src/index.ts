@@ -10,16 +10,18 @@ async function main() {
   await prisma.$connect();
   logger.info('Database connection established');
 
-  const app    = buildApp();
+  const { app, scheduleRunner } = buildApp();
   const server = app.listen(PORT, () => {
     logger.info('Server listening', { port: PORT });
   });
+  scheduleRunner.start();
 
   // Graceful shutdown: stop accepting connections, drain in-flight requests,
   // then release the Prisma connection pool before exit.
   // SIGTERM is sent by Docker/Kubernetes on container stop; SIGINT is Ctrl+C.
   const shutdown = async (signal: string) => {
     logger.info('Shutdown signal received', { signal });
+    scheduleRunner.stop();
     server.close(async () => {
       await prisma.$disconnect();
       logger.info('Graceful shutdown complete');

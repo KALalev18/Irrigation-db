@@ -4,6 +4,7 @@
 // both writes would succeed; SERIALIZABLE makes Postgres reject one with P2034.
 import { PrismaClient, Prisma } from '@prisma/client';
 import { StartIrrigationDto, UpdateIrrigationEventDto } from './irrigation.validation';
+import { AppError, ErrorCode } from '../../shared/errors/AppError';
 
 // Use the generated Prisma type directly to avoid maintaining a separate interface.
 type IrrigationEvent = Prisma.IrrigationEventGetPayload<Record<string, never>>;
@@ -51,8 +52,11 @@ export class IrrigationRepository {
           where: { id },
           select: { status: true },
         });
-        if (!event || event.status === 'COMPLETED') {
-          throw new Error(`Event ${id} already completed or missing`);
+        if (!event) {
+          throw AppError.notFound('IrrigationEvent', id, ErrorCode.IRRIGATION_EVENT_NOT_FOUND);
+        }
+        if (event.status === 'COMPLETED') {
+          throw new AppError(`Irrigation event "${id}" is already completed`, ErrorCode.EVENT_ALREADY_COMPLETED, 409);
         }
         return tx.irrigationEvent.update({
           where: { id },
