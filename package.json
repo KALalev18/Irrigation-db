@@ -14,7 +14,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests --max-warnings 0",
+    "lint": "eslint src tests prisma --max-warnings 0",
     "test": "jest",
     "test:watch": "jest --watch",
     "db:migrate": "prisma migrate dev",

@@ -1,6 +1,6 @@
 import { SensorService } from '../../../src/modules/sensors/sensor.service';
 import { SensorRepository } from '../../../src/modules/sensors/sensor.repository';
-import { AppError, ErrorCode } from '../../../src/shared/errors/AppError';
+import { ErrorCode } from '../../../src/shared/errors/AppError';
 import { Sensor, SensorReading } from '@prisma/client';
 
 const mockSensor: Sensor = {
@@ -46,7 +46,7 @@ describe('SensorService.bulkIngest', () => {
     expect(result.anomalies).toBe(1);
     expect(result.rejected).toBe(0);
     const insertedData = (repo.bulkCreateReadings as jest.Mock).mock.calls[0][0] as SensorReading[];
-    const anomalousEntry = insertedData.find((r) => (r as any).value === -5.2);
+    const anomalousEntry = insertedData.find((r) => r.value === -5.2);
     expect(anomalousEntry?.isAnomaly).toBe(true);
   });
 
