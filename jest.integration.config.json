@@ -1,0 +1,11 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "transform": {
+    "^.+\\.tsx?$": ["ts-jest", { "tsconfig": "tsconfig.test.json" }]
+  },
+  "roots": ["<rootDir>/tests/integration"],
+  "testMatch": ["**/*.test.ts"],
+  "setupFiles": ["dotenv/config"],
+  "testTimeout": 30000
+}

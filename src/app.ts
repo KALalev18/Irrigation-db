@@ -67,12 +67,12 @@ function buildApp() {
   });
 
   // Domain routes
-  app.use('/api/v1/zones',      buildZoneRouter(zoneService));
-  app.use('/api/v1/sensors',    buildSensorRouter(sensorService));
+  app.use('/api/v1/zones', buildZoneRouter(zoneService));
+  app.use('/api/v1/sensors', buildSensorRouter(sensorService));
   app.use('/api/v1/irrigation', buildIrrigationRouter(irrigationService));
-  app.use('/api/v1/weather',    buildWeatherRouter(weatherService));
-  app.use('/api/v1/schedules',  buildScheduleRouter(scheduleService));
-  app.use('/api/v1/stats',      buildStatsRouter(new StatsRepository(prisma)));
+  app.use('/api/v1/weather', buildWeatherRouter(weatherService));
+  app.use('/api/v1/schedules', buildScheduleRouter(scheduleService));
+  app.use('/api/v1/stats', buildStatsRouter(new StatsRepository(prisma)));
 
   // Dashboard (public/index.html) is served from the same origin as the API.
   app.use(express.static(path.resolve(__dirname, '..', 'public')));

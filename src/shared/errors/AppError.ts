@@ -3,24 +3,23 @@
 /** Machine-readable error codes included in every error response body. */
 export enum ErrorCode {
   // --- Domain errors (map to 4xx) ---
-  SENSOR_NOT_FOUND           = 'SENSOR_NOT_FOUND',
-  ZONE_NOT_FOUND             = 'ZONE_NOT_FOUND',
-  SCHEDULE_NOT_FOUND         = 'SCHEDULE_NOT_FOUND',
+  SENSOR_NOT_FOUND = 'SENSOR_NOT_FOUND',
+  ZONE_NOT_FOUND = 'ZONE_NOT_FOUND',
+  SCHEDULE_NOT_FOUND = 'SCHEDULE_NOT_FOUND',
   IRRIGATION_EVENT_NOT_FOUND = 'IRRIGATION_EVENT_NOT_FOUND',
-  EVENT_ALREADY_COMPLETED    = 'EVENT_ALREADY_COMPLETED',
-  ANOMALOUS_SENSOR_READING   = 'ANOMALOUS_SENSOR_READING',
-  SENSOR_INACTIVE            = 'SENSOR_INACTIVE',
-  DUPLICATE_SERIAL           = 'DUPLICATE_SERIAL',
+  EVENT_ALREADY_COMPLETED = 'EVENT_ALREADY_COMPLETED',
 
   // --- Infrastructure errors (map to 5xx) ---
-  DATABASE_CONFLICT    = 'DATABASE_CONFLICT',    // 409 — unique constraint violated
+  DATABASE_CONFLICT = 'DATABASE_CONFLICT', // 409 — unique constraint violated
+  CHECK_VIOLATION = 'CHECK_VIOLATION', // 422 — CHECK constraint violated
   TRANSACTION_DEADLOCK = 'TRANSACTION_DEADLOCK', // 503 — safe to retry
+  UPSTREAM_ERROR = 'UPSTREAM_ERROR', // 502 — external API (Open-Meteo) failed
 
   // --- Input errors (map to 4xx) ---
-  VALIDATION_ERROR     = 'VALIDATION_ERROR',     // 422 — Zod schema rejection
+  VALIDATION_ERROR = 'VALIDATION_ERROR', // 422 — Zod schema rejection
 
   // --- Infra protection ---
-  RATE_LIMIT_EXCEEDED  = 'RATE_LIMIT_EXCEEDED',  // 429
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED', // 429
 }
 
 // isOperational=true → expected failure (bad input, missing record).

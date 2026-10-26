@@ -8,6 +8,9 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL ?? 'info',
+  // Jest sets NODE_ENV=test. Tests trigger errors on purpose (e.g. the
+  // concurrency test's serialization failures), so logging is off there.
+  silent: process.env.NODE_ENV === 'test',
   format: combine(timestamp(), json()),
   defaultMeta: { service: 'irrigation-api' },
   transports: [

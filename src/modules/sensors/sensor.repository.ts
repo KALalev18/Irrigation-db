@@ -19,8 +19,8 @@ export class SensorRepository {
   }): Promise<Sensor[]> {
     return this.db.sensor.findMany({
       where: {
-        ...(params.zoneId   && { zoneId:   params.zoneId }),
-        ...(params.type     && { type:     params.type }),
+        ...(params.zoneId && { zoneId: params.zoneId }),
+        ...(params.type && { type: params.type }),
         ...(params.isActive !== undefined && { isActive: params.isActive }),
       },
       take: params.limit,
@@ -47,16 +47,8 @@ export class SensorRepository {
     });
   }
 
-  // skipDuplicates handles gateway replays after a connectivity outage
-  async bulkCreateReadings(
-    data: Prisma.SensorReadingCreateManyInput[],
-  ): Promise<Prisma.BatchPayload> {
+  // Skips rows that hit the unique (sensor_id, recorded_at) index; returns the inserted count
+  async bulkCreateReadings(data: Prisma.SensorReadingCreateManyInput[]): Promise<Prisma.BatchPayload> {
     return this.db.sensorReading.createMany({ data, skipDuplicates: true });
-  }
-
-  async countReadingsInWindow(sensorId: string, from: Date, to: Date): Promise<number> {
-    return this.db.sensorReading.count({
-      where: { sensorId, recordedAt: { gte: from, lte: to } },
-    });
   }
 }

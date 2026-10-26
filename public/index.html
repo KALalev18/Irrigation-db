@@ -1,626 +1,977 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Irrigation DB</title>
-<style>
-  :root {
-    color-scheme: light;
-    --page: #f4f4f1;
-    --card: #fcfcfb;
-    --border: #e2e1dc;
-    --grid: #ecebe6;
-    --text: #1b1b19;
-    --text-2: #52514e;
-    --text-3: #7d7c76;
-    --accent: #2a78d6;
-    --series-1: #2a78d6;
-    --series-2: #eb6834;
-    --series-3: #1baf7a;
-    --good: #23824a;
-    --warn: #a86500;
-    --bad: #c23934;
-    --code-bg: #f0efeb;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --page: #111110;
-      --card: #1a1a19;
-      --border: #2e2e2b;
-      --grid: #262624;
-      --text: #f0efec;
-      --text-2: #c3c2b7;
-      --text-3: #8f8e86;
-      --accent: #3987e5;
-      --series-1: #3987e5;
-      --series-2: #d95926;
-      --series-3: #199e70;
-      --good: #4cb877;
-      --warn: #e0a032;
-      --bad: #e66767;
-      --code-bg: #232321;
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --page: #111110;
-    --card: #1a1a19;
-    --border: #2e2e2b;
-    --grid: #262624;
-    --text: #f0efec;
-    --text-2: #c3c2b7;
-    --text-3: #8f8e86;
-    --accent: #3987e5;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --good: #4cb877;
-    --warn: #e0a032;
-    --bad: #e66767;
-    --code-bg: #232321;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Irrigation DB</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f4f4f1;
+        --card: #fcfcfb;
+        --border: #e2e1dc;
+        --grid: #ecebe6;
+        --text: #1b1b19;
+        --text-2: #52514e;
+        --text-3: #7d7c76;
+        --accent: #2a78d6;
+        --series-1: #2a78d6;
+        --series-2: #eb6834;
+        --series-3: #1baf7a;
+        --good: #23824a;
+        --warn: #a86500;
+        --bad: #c23934;
+        --code-bg: #f0efeb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          color-scheme: dark;
+          --page: #111110;
+          --card: #1a1a19;
+          --border: #2e2e2b;
+          --grid: #262624;
+          --text: #f0efec;
+          --text-2: #c3c2b7;
+          --text-3: #8f8e86;
+          --accent: #3987e5;
+          --series-1: #3987e5;
+          --series-2: #d95926;
+          --series-3: #199e70;
+          --good: #4cb877;
+          --warn: #e0a032;
+          --bad: #e66767;
+          --code-bg: #232321;
+        }
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+        --page: #111110;
+        --card: #1a1a19;
+        --border: #2e2e2b;
+        --grid: #262624;
+        --text: #f0efec;
+        --text-2: #c3c2b7;
+        --text-3: #8f8e86;
+        --accent: #3987e5;
+        --series-1: #3987e5;
+        --series-2: #d95926;
+        --series-3: #199e70;
+        --good: #4cb877;
+        --warn: #e0a032;
+        --bad: #e66767;
+        --code-bg: #232321;
+      }
 
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--page);
-    color: var(--text);
-    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  .wrap { max-width: 1160px; margin: 0 auto; padding: 24px 16px 48px; }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+      }
 
-  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
-  h1 { font-size: 20px; font-weight: 600; margin: 0; }
-  header p { margin: 2px 0 0; color: var(--text-2); }
-  .status { color: var(--text-2); font-size: 13px; }
-  .status b { font-weight: 500; }
-  .status .ok { color: var(--good); }
-  .status .down { color: var(--bad); }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+      }
+      header p {
+        margin: 2px 0 0;
+        color: var(--text-2);
+      }
+      .status {
+        color: var(--text-2);
+        font-size: 13px;
+      }
+      .status b {
+        font-weight: 500;
+      }
+      .status .ok {
+        color: var(--good);
+      }
+      .status .down {
+        color: var(--bad);
+      }
 
-  h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
-  .sub { color: var(--text-3); font-size: 13px; margin: 0 0 14px; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; min-width: 0; }
+      h2 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0 0 2px;
+      }
+      .sub {
+        color: var(--text-3);
+        font-size: 13px;
+        margin: 0 0 14px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 18px;
+        min-width: 0;
+      }
 
-  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
-  .tile .label { color: var(--text-2); font-size: 13px; }
-  .tile .value { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; margin: 2px 0; }
-  .tile .note { color: var(--text-3); font-size: 12.5px; }
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .tile .label {
+        color: var(--text-2);
+        font-size: 13px;
+      }
+      .tile .value {
+        font-size: 26px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        margin: 2px 0;
+      }
+      .tile .note {
+        color: var(--text-3);
+        font-size: 12.5px;
+      }
 
-  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; align-items: start; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; align-items: start; }
+      .grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+        align-items: start;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+        align-items: start;
+      }
 
-  /* chart */
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 8px; font-size: 13px; color: var(--text-2); }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-  .chart { position: relative; height: 280px; }
-  .chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
-  .chart text { font-size: 11.5px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
-  .chart .end-label { fill: var(--text-2); font-size: 12px; }
-  .tooltip {
-    position: absolute; pointer-events: none; display: none;
-    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
-    padding: 6px 10px; font-size: 12.5px; box-shadow: 0 2px 8px rgba(0,0,0,.08); white-space: nowrap;
-  }
-  .tooltip .t { color: var(--text-3); margin-bottom: 2px; }
-  .tooltip .row { display: flex; align-items: center; gap: 6px; }
-  .tooltip .row b { margin-left: auto; padding-left: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
-  details { margin-top: 10px; color: var(--text-2); font-size: 13px; }
-  summary { cursor: pointer; }
+      /* chart */
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 16px;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: var(--text-2);
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .swatch {
+        width: 14px;
+        height: 3px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+      .swatch.dashed {
+        height: 0;
+        border-top: 2px dashed var(--text-3);
+        border-radius: 0;
+      }
+      .chart {
+        position: relative;
+        height: 280px;
+      }
+      .chart svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .chart text {
+        font-size: 11.5px;
+        fill: var(--text-3);
+        font-variant-numeric: tabular-nums;
+      }
+      .chart .end-label {
+        fill: var(--text-2);
+        font-size: 12px;
+      }
+      .tooltip {
+        position: absolute;
+        pointer-events: none;
+        display: none;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 12.5px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        white-space: nowrap;
+      }
+      .tooltip .t {
+        color: var(--text-3);
+        margin-bottom: 2px;
+      }
+      .tooltip .row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tooltip .row b {
+        margin-left: auto;
+        padding-left: 12px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+      details {
+        margin-top: 10px;
+        color: var(--text-2);
+        font-size: 13px;
+      }
+      summary {
+        cursor: pointer;
+      }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; font-weight: 500; color: var(--text-3); padding: 4px 8px 6px 0; border-bottom: 1px solid var(--border); }
-  td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; vertical-align: top; }
-  tr:last-child td { border-bottom: 0; }
-  td.num, th.num { text-align: right; }
-  .table-scroll { overflow-x: auto; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        font-weight: 500;
+        color: var(--text-3);
+        padding: 4px 8px 6px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 6px 8px 6px 0;
+        border-bottom: 1px solid var(--grid);
+        font-variant-numeric: tabular-nums;
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+      }
+      .table-scroll {
+        overflow-x: auto;
+      }
 
-  .badge { display: inline-block; font-size: 12px; padding: 0 7px; border-radius: 10px; border: 1px solid currentColor; line-height: 18px; }
-  .badge.good { color: var(--good); }
-  .badge.warn { color: var(--warn); }
-  .badge.bad { color: var(--bad); }
-  .badge.info { color: var(--accent); }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        padding: 0 7px;
+        border-radius: 10px;
+        border: 1px solid currentColor;
+        line-height: 18px;
+      }
+      .badge.good {
+        color: var(--good);
+      }
+      .badge.warn {
+        color: var(--warn);
+      }
+      .badge.bad {
+        color: var(--bad);
+      }
+      .badge.info {
+        color: var(--accent);
+      }
 
-  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 13px; }
-  .kv dt { color: var(--text-2); }
-  .kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-  .callout { margin-top: 12px; font-size: 13px; color: var(--text-2); border-left: 3px solid var(--border); padding-left: 10px; }
+      .kv {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 16px;
+        font-size: 13px;
+      }
+      .kv dt {
+        color: var(--text-2);
+      }
+      .kv dd {
+        margin: 0;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .callout {
+        margin-top: 12px;
+        font-size: 13px;
+        color: var(--text-2);
+        border-left: 3px solid var(--border);
+        padding-left: 10px;
+      }
 
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-  select, button {
-    font: inherit; font-size: 13px; color: var(--text);
-    background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
-  }
-  button { cursor: pointer; background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
-  button:hover { filter: brightness(1.08); }
-  button:disabled { opacity: .6; cursor: default; }
-  pre {
-    margin: 0; background: var(--code-bg); border-radius: 6px; padding: 10px 12px;
-    font: 12.5px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-x: auto; color: var(--text);
-  }
-  .result { font-size: 13px; color: var(--text-2); margin-bottom: 8px; min-height: 20px; }
-  .result b { color: var(--text); font-weight: 600; }
-  .muted { color: var(--text-3); }
-  .error { color: var(--bad); }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      select,
+      button {
+        font: inherit;
+        font-size: 13px;
+        color: var(--text);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+      }
+      button {
+        cursor: pointer;
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 500;
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      pre {
+        margin: 0;
+        background: var(--code-bg);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font:
+          12.5px/1.55 ui-monospace,
+          'Cascadia Mono',
+          Consolas,
+          monospace;
+        overflow-x: auto;
+        color: var(--text);
+      }
+      .result {
+        font-size: 13px;
+        color: var(--text-2);
+        margin-bottom: 8px;
+        min-height: 20px;
+      }
+      .result b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .muted {
+        color: var(--text-3);
+      }
+      .error {
+        color: var(--bad);
+      }
 
-  footer { color: var(--text-3); font-size: 12.5px; margin-top: 24px; }
-  footer a { color: inherit; }
+      footer {
+        color: var(--text-3);
+        font-size: 12.5px;
+        margin-top: 24px;
+      }
+      footer a {
+        color: inherit;
+      }
 
-  @media (max-width: 900px) {
-    .tiles { grid-template-columns: repeat(2, 1fr); }
-    .grid, .grid-2 { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 420px) {
-    .tile .value { font-size: 22px; }
-  }
-</style>
-</head>
-<body>
-<div class="wrap">
+      @media (max-width: 900px) {
+        .tiles {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .grid,
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 420px) {
+        .tile .value {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>Irrigation DB</h1>
+          <p>Sensor data, schedules and irrigation events from the local PostgreSQL database.</p>
+        </div>
+        <div class="status" id="status">Connecting to the API...</div>
+      </header>
 
-  <header>
-    <div>
-      <h1>Irrigation DB</h1>
-      <p>Sensor data, schedules and irrigation events from the local PostgreSQL database.</p>
-    </div>
-    <div class="status" id="status">Connecting to the API...</div>
-  </header>
+      <section class="tiles">
+        <div class="card tile">
+          <div class="label">Readings stored</div>
+          <div class="value" id="tReadings">-</div>
+          <div class="note" id="tReadingsNote">&nbsp;</div>
+        </div>
+        <div class="card tile">
+          <div class="label">Readings in the last 24 h</div>
+          <div class="value" id="t24h">-</div>
+          <div class="note" id="t24hNote">&nbsp;</div>
+        </div>
+        <div class="card tile">
+          <div class="label">Active sensors</div>
+          <div class="value" id="tSensors">-</div>
+          <div class="note" id="tSensorsNote">&nbsp;</div>
+        </div>
+        <div class="card tile">
+          <div class="label">Database size</div>
+          <div class="value" id="tSize">-</div>
+          <div class="note">pg_database_size()</div>
+        </div>
+      </section>
 
-  <section class="tiles">
-    <div class="card tile">
-      <div class="label">Readings stored</div>
-      <div class="value" id="tReadings">-</div>
-      <div class="note" id="tReadingsNote">&nbsp;</div>
-    </div>
-    <div class="card tile">
-      <div class="label">Readings in the last 24 h</div>
-      <div class="value" id="t24h">-</div>
-      <div class="note" id="t24hNote">&nbsp;</div>
-    </div>
-    <div class="card tile">
-      <div class="label">Active sensors</div>
-      <div class="value" id="tSensors">-</div>
-      <div class="note" id="tSensorsNote">&nbsp;</div>
-    </div>
-    <div class="card tile">
-      <div class="label">Database size</div>
-      <div class="value" id="tSize">-</div>
-      <div class="note">pg_database_size()</div>
-    </div>
-  </section>
+      <section class="grid">
+        <div class="card">
+          <h2>Soil moisture, last 24 hours</h2>
+          <p class="sub">
+            One soil moisture sensor per zone. Readings flagged as anomalous are left out. Below the dashed
+            line, a scheduled run waters the zone.
+          </p>
+          <div class="legend" id="legend"></div>
+          <div class="chart" id="chart"><div class="tooltip" id="tooltip"></div></div>
+          <details>
+            <summary>Show as table (hourly averages)</summary>
+            <div class="table-scroll" id="chartTable" style="margin-top: 8px"></div>
+          </details>
+        </div>
 
-  <section class="grid">
-    <div class="card">
-      <h2>Soil moisture, last 24 hours</h2>
-      <p class="sub">One soil moisture sensor per zone. Readings flagged as anomalous are left out. Below the dashed line, a scheduled run waters the zone.</p>
-      <div class="legend" id="legend"></div>
-      <div class="chart" id="chart"><div class="tooltip" id="tooltip"></div></div>
-      <details>
-        <summary>Show as table (hourly averages)</summary>
-        <div class="table-scroll" id="chartTable" style="margin-top:8px"></div>
-      </details>
-    </div>
+        <div class="card">
+          <h2>Weather</h2>
+          <p class="sub">Latest row in weather_snapshots</p>
+          <dl class="kv" id="weather">
+            <dt class="muted">Loading...</dt>
+            <dd></dd>
+          </dl>
+          <div class="callout" id="rainRule"></div>
+        </div>
+      </section>
 
-    <div class="card">
-      <h2>Weather</h2>
-      <p class="sub">Latest row in weather_snapshots</p>
-      <dl class="kv" id="weather"><dt class="muted">Loading...</dt><dd></dd></dl>
-      <div class="callout" id="rainRule"></div>
-    </div>
-  </section>
+      <section class="grid">
+        <div class="card">
+          <h2>Recent irrigation events</h2>
+          <p class="sub">irrigation_events, newest first</p>
+          <div class="table-scroll" id="events"><span class="muted">Loading...</span></div>
+        </div>
+        <div class="card">
+          <h2>Schedules</h2>
+          <p class="sub">Checked every minute by ScheduleRunner</p>
+          <div class="table-scroll" id="schedules"><span class="muted">Loading...</span></div>
+        </div>
+      </section>
 
-  <section class="grid">
-    <div class="card">
-      <h2>Recent irrigation events</h2>
-      <p class="sub">irrigation_events, newest first</p>
-      <div class="table-scroll" id="events"><span class="muted">Loading...</span></div>
-    </div>
-    <div class="card">
-      <h2>Schedules</h2>
-      <p class="sub">Checked every minute by ScheduleRunner</p>
-      <div class="table-scroll" id="schedules"><span class="muted">Loading...</span></div>
-    </div>
-  </section>
-
-  <section class="grid-2">
-    <div class="card">
-      <h2>Query plan</h2>
-      <p class="sub">Runs <code>EXPLAIN ANALYZE</code> on the latest-readings query against the real sensor_readings table.</p>
-      <div class="controls">
-        <select id="planSensor" aria-label="Sensor"></select>
-        <button id="planBtn">Run EXPLAIN ANALYZE</button>
-      </div>
-      <div class="result" id="planResult"></div>
-      <pre id="planOut">SELECT * FROM sensor_readings
+      <section class="grid-2">
+        <div class="card">
+          <h2>Query plan</h2>
+          <p class="sub">
+            Runs <code>EXPLAIN ANALYZE</code> on the latest-readings query against the real sensor_readings
+            table.
+          </p>
+          <div class="controls">
+            <select id="planSensor" aria-label="Sensor"></select>
+            <button id="planBtn">Run EXPLAIN ANALYZE</button>
+          </div>
+          <div class="result" id="planResult"></div>
+          <pre id="planOut">
+SELECT * FROM sensor_readings
 WHERE sensor_id = $1
 ORDER BY recorded_at DESC
 LIMIT 100;</pre>
+        </div>
+
+        <div class="card">
+          <h2>Send a test batch</h2>
+          <p class="sub">
+            Posts 20 readings to <code>POST /api/v1/sensors/readings/bulk</code>. Two of them are outside the
+            sensor's calibration range, so they should come back as anomalies.
+          </p>
+          <div class="controls">
+            <select id="ingestSensor" aria-label="Sensor"></select>
+            <button id="ingestBtn">Send 20 readings</button>
+          </div>
+          <div class="result" id="ingestResult"></div>
+          <pre id="ingestOut" class="muted">The response will appear here.</pre>
+        </div>
+      </section>
+
+      <footer>
+        Data refreshes every 30 seconds. API: <a href="/health">/health</a> ·
+        <a href="/api/v1/stats">/api/v1/stats</a> · <a href="/api/v1/zones">/api/v1/zones</a>
+      </footer>
     </div>
 
-    <div class="card">
-      <h2>Send a test batch</h2>
-      <p class="sub">Posts 20 readings to <code>POST /api/v1/sensors/readings/bulk</code>. Two of them are outside the sensor's calibration range, so they should come back as anomalies.</p>
-      <div class="controls">
-        <select id="ingestSensor" aria-label="Sensor"></select>
-        <button id="ingestBtn">Send 20 readings</button>
-      </div>
-      <div class="result" id="ingestResult"></div>
-      <pre id="ingestOut" class="muted">The response will appear here.</pre>
-    </div>
-  </section>
+    <script>
+      const REFRESH_MS = 30_000;
+      const MOISTURE_THRESHOLD = 30; // MOISTURE_THRESHOLD_PCT in irrigation.service.ts
+      const RAIN_SKIP_MM = 5; // hasSufficientRecentPrecipitation in weather.service.ts
+      const SERIES_VARS = ['--series-1', '--series-2', '--series-3'];
+      const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  <footer>
-    Data refreshes every 30 seconds. API: <a href="/health">/health</a> ·
-    <a href="/api/v1/stats">/api/v1/stats</a> · <a href="/api/v1/zones">/api/v1/zones</a>
-  </footer>
-</div>
+      const $ = (id) => document.getElementById(id);
+      const nf = new Intl.NumberFormat();
+      const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+      const dateTimeFmt = new Intl.DateTimeFormat(undefined, {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
-<script>
-const REFRESH_MS = 30_000;
-const MOISTURE_THRESHOLD = 30;   // MOISTURE_THRESHOLD_PCT in irrigation.service.ts
-const RAIN_SKIP_MM = 5;          // hasSufficientRecentPrecipitation in weather.service.ts
-const SERIES_VARS = ['--series-1', '--series-2', '--series-3'];
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      let sensors = [];
+      let zones = [];
+      let chartSeries = [];
 
-const $ = (id) => document.getElementById(id);
-const nf = new Intl.NumberFormat();
-const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
-const dateTimeFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      async function api(path, options) {
+        const res = await fetch(path, options);
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error?.message || `${res.status} ${res.statusText}`);
+        return body.data;
+      }
 
-let sensors = [];
-let zones = [];
-let chartSeries = [];
+      function escapeHtml(s) {
+        return String(s).replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+      }
 
-async function api(path, options) {
-  const res = await fetch(path, options);
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error?.message || `${res.status} ${res.statusText}`);
-  return body.data;
-}
+      function formatBytes(n) {
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        while (n >= 1024 && i < units.length - 1) {
+          n /= 1024;
+          i++;
+        }
+        return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+      }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
+      function timeAgo(date) {
+        const s = Math.round((Date.now() - new Date(date)) / 1000);
+        if (s < 60) return 'just now';
+        if (s < 3600) return `${Math.round(s / 60)} min ago`;
+        if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+        return `${Math.round(s / 86400)} days ago`;
+      }
 
-function formatBytes(n) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0;
-  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
-  return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
-}
+      function describeCron(expr) {
+        const [min, hour, dom, mon, dow] = expr.split(/\s+/);
+        if (!/^\d+$/.test(min) || !/^\d+$/.test(hour) || dom !== '*' || mon !== '*') return expr;
+        const at = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`;
+        if (dow === '*') return `Every day at ${at}`;
+        if (/^[\d,]+$/.test(dow))
+          return `${dow
+            .split(',')
+            .map((d) => DAY_NAMES[+d % 7])
+            .join(', ')} at ${at}`;
+        return expr;
+      }
 
-function timeAgo(date) {
-  const s = Math.round((Date.now() - new Date(date)) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-  return `${Math.round(s / 86400)} days ago`;
-}
+      function zoneName(id) {
+        return zones.find((z) => z.id === id)?.name ?? 'Unknown zone';
+      }
 
-function describeCron(expr) {
-  const [min, hour, dom, mon, dow] = expr.split(/\s+/);
-  if (!/^\d+$/.test(min) || !/^\d+$/.test(hour) || dom !== '*' || mon !== '*') return expr;
-  const at = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`;
-  if (dow === '*') return `Every day at ${at}`;
-  if (/^[\d,]+$/.test(dow)) return `${dow.split(',').map((d) => DAY_NAMES[+d % 7]).join(', ')} at ${at}`;
-  return expr;
-}
+      // "North Field - Wheat" -> "North Field"
+      function shortZoneName(id) {
+        return zoneName(id).split(' - ')[0];
+      }
 
-function zoneName(id) {
-  return zones.find((z) => z.id === id)?.name ?? 'Unknown zone';
-}
+      // ---------- stats tiles + events ----------
 
-// "North Field - Wheat" -> "North Field"
-function shortZoneName(id) {
-  return zoneName(id).split(' - ')[0];
-}
+      const STATUS_CLASS = {
+        COMPLETED: 'good',
+        ACTIVE: 'info',
+        PENDING: 'info',
+        FAILED: 'bad',
+        SKIPPED: 'warn',
+      };
+      const TRIGGER_LABEL = {
+        SCHEDULED: 'Schedule',
+        MANUAL: 'Manual',
+        SENSOR_THRESHOLD: 'Moisture threshold',
+        WEATHER_ADJUSTED: 'Weather',
+      };
 
-// ---------- stats tiles + events ----------
+      function renderStats(stats) {
+        const { counts, last24h, databaseSizeBytes, recentEvents } = stats;
+        $('tReadings').textContent = nf.format(counts.readings);
+        $('tReadingsNote').textContent = last24h.latestAt
+          ? `Latest ${timeAgo(last24h.latestAt)}`
+          : 'No readings yet';
 
-const STATUS_CLASS = { COMPLETED: 'good', ACTIVE: 'info', PENDING: 'info', FAILED: 'bad', SKIPPED: 'warn' };
-const TRIGGER_LABEL = { SCHEDULED: 'Schedule', MANUAL: 'Manual', SENSOR_THRESHOLD: 'Moisture threshold', WEATHER_ADJUSTED: 'Weather' };
+        $('t24h').textContent = nf.format(last24h.total);
+        const rate = last24h.total ? (last24h.anomalies / last24h.total) * 100 : 0;
+        $('t24hNote').textContent =
+          `${nf.format(last24h.anomalies)} flagged as anomalies (${rate.toFixed(1)}%)`;
 
-function renderStats(stats) {
-  const { counts, last24h, databaseSizeBytes, recentEvents } = stats;
-  $('tReadings').textContent = nf.format(counts.readings);
-  $('tReadingsNote').textContent = last24h.latestAt ? `Latest ${timeAgo(last24h.latestAt)}` : 'No readings yet';
+        $('tSensors').textContent = `${counts.activeSensors} of ${counts.sensors}`;
+        $('tSensorsNote').textContent = `Across ${counts.zones} zones`;
+        $('tSize').textContent = formatBytes(databaseSizeBytes);
 
-  $('t24h').textContent = nf.format(last24h.total);
-  const rate = last24h.total ? (last24h.anomalies / last24h.total) * 100 : 0;
-  $('t24hNote').textContent = `${nf.format(last24h.anomalies)} flagged as anomalies (${rate.toFixed(1)}%)`;
-
-  $('tSensors').textContent = `${counts.activeSensors} of ${counts.sensors}`;
-  $('tSensorsNote').textContent = `Across ${counts.zones} zones`;
-  $('tSize').textContent = formatBytes(databaseSizeBytes);
-
-  if (recentEvents.length === 0) {
-    $('events').innerHTML = '<span class="muted">No irrigation events yet.</span>';
-    return;
-  }
-  $('events').innerHTML = `<table>
+        if (recentEvents.length === 0) {
+          $('events').innerHTML = '<span class="muted">No irrigation events yet.</span>';
+          return;
+        }
+        $('events').innerHTML = `<table>
     <thead><tr><th>Zone</th><th>Trigger</th><th>Started</th><th class="num">Duration</th><th class="num">Volume</th><th>Status</th></tr></thead>
-    <tbody>${recentEvents.map((e) => `<tr>
+    <tbody>${recentEvents
+      .map(
+        (e) => `<tr>
       <td>${escapeHtml(e.zone.name.split(' - ')[0])}</td>
       <td>${TRIGGER_LABEL[e.trigger] ?? e.trigger}</td>
       <td>${dateTimeFmt.format(new Date(e.startedAt))}</td>
       <td class="num">${e.durationSec ? Math.round(e.durationSec / 60) + ' min' : '-'}</td>
       <td class="num">${e.volumeLiters != null ? nf.format(Math.round(e.volumeLiters)) + ' L' : '-'}</td>
       <td><span class="badge ${STATUS_CLASS[e.status] ?? ''}">${e.status.toLowerCase()}</span></td>
-    </tr>`).join('')}</tbody></table>`;
-}
+    </tr>`,
+      )
+      .join('')}</tbody></table>`;
+      }
 
-// ---------- weather ----------
+      // ---------- weather ----------
 
-function renderWeather(snapshots) {
-  if (snapshots.length === 0) {
-    $('weather').innerHTML = '<dt class="muted">No weather snapshots stored.</dt><dd></dd>';
-    $('rainRule').textContent = '';
-    return;
-  }
-  const w = snapshots[0];
-  const since = Date.now() - 24 * 3600 * 1000;
-  const rain24h = snapshots.filter((s) => new Date(s.recordedAt) >= since).reduce((sum, s) => sum + s.precipitationMm, 0);
-  $('weather').innerHTML = `
+      function renderWeather(snapshots) {
+        if (snapshots.length === 0) {
+          $('weather').innerHTML = '<dt class="muted">No weather snapshots stored.</dt><dd></dd>';
+          $('rainRule').textContent = '';
+          return;
+        }
+        const w = snapshots[0];
+        const since = Date.now() - 24 * 3600 * 1000;
+        const rain24h = snapshots
+          .filter((s) => new Date(s.recordedAt) >= since)
+          .reduce((sum, s) => sum + s.precipitationMm, 0);
+        $('weather').innerHTML = `
     <dt>Recorded</dt><dd>${dateTimeFmt.format(new Date(w.recordedAt))}</dd>
     <dt>Temperature</dt><dd>${w.temperatureC.toFixed(1)} °C</dd>
     <dt>Humidity</dt><dd>${Math.round(w.humidityPct)} %</dd>
     <dt>Wind</dt><dd>${w.windSpeedMs.toFixed(1)} m/s</dd>
     <dt>Evapotranspiration</dt><dd>${w.evapotranspirationMm.toFixed(1)} mm/day</dd>
-    <dt>Rain, last 24 h</dt><dd>${rain24h.toFixed(1)} mm</dd>`;
-  $('rainRule').innerHTML = rain24h >= RAIN_SKIP_MM
-    ? `<span class="badge warn">skipping</span> More than ${RAIN_SKIP_MM} mm of rain in the last 24 h, so scheduled runs are skipped.`
-    : `<span class="badge good">running</span> Less than ${RAIN_SKIP_MM} mm of rain in the last 24 h, so scheduled runs go ahead.`;
-}
+    <dt>Rain, last 24 h</dt><dd>${rain24h.toFixed(2)} mm</dd>`;
+        $('rainRule').innerHTML =
+          rain24h >= RAIN_SKIP_MM
+            ? `<span class="badge warn">skipping</span> More than ${RAIN_SKIP_MM} mm of rain in the last 24 h, so scheduled runs are skipped.`
+            : `<span class="badge good">running</span> Less than ${RAIN_SKIP_MM} mm of rain in the last 24 h, so scheduled runs go ahead.`;
+      }
 
-// ---------- schedules ----------
+      // ---------- schedules ----------
 
-async function renderSchedules() {
-  const lists = await Promise.all(zones.map((z) => api(`/api/v1/schedules/zones/${z.id}`)));
-  const rows = lists.flat();
-  if (rows.length === 0) {
-    $('schedules').innerHTML = '<span class="muted">No schedules.</span>';
-    return;
-  }
-  $('schedules').innerHTML = `<table>
+      async function renderSchedules() {
+        const lists = await Promise.all(zones.map((z) => api(`/api/v1/schedules/zones/${z.id}`)));
+        const rows = lists.flat();
+        if (rows.length === 0) {
+          $('schedules').innerHTML = '<span class="muted">No schedules.</span>';
+          return;
+        }
+        $('schedules').innerHTML = `<table>
     <thead><tr><th>Zone</th><th>When</th><th class="num">Length</th></tr></thead>
-    <tbody>${rows.map((s) => `<tr${s.isEnabled ? '' : ' class="muted"'}>
+    <tbody>${rows
+      .map(
+        (s) => `<tr${s.isEnabled ? '' : ' class="muted"'}>
       <td>${escapeHtml(shortZoneName(s.zoneId))}</td>
       <td title="${escapeHtml(s.cronExpr)}">${escapeHtml(describeCron(s.cronExpr))}${s.isEnabled ? '' : ' (off)'}</td>
       <td class="num">${Math.round(s.durationSec / 60)} min</td>
-    </tr>`).join('')}</tbody></table>`;
-}
+    </tr>`,
+      )
+      .join('')}</tbody></table>`;
+      }
 
-// ---------- moisture chart ----------
+      // ---------- moisture chart ----------
 
-async function loadMoisture() {
-  const moisture = sensors.filter((s) => s.type === 'SOIL_MOISTURE' && s.isActive).slice(0, SERIES_VARS.length);
-  const since = Date.now() - 24 * 3600 * 1000;
-  const readings = await Promise.all(moisture.map((s) => api(`/api/v1/sensors/${s.id}/readings?limit=200`)));
+      async function loadMoisture() {
+        const moisture = sensors
+          .filter((s) => s.type === 'SOIL_MOISTURE' && s.isActive)
+          .slice(0, SERIES_VARS.length);
+        const since = Date.now() - 24 * 3600 * 1000;
+        const readings = await Promise.all(
+          moisture.map((s) => api(`/api/v1/sensors/${s.id}/readings?limit=200`)),
+        );
 
-  chartSeries = moisture.map((s, i) => ({
-    name: zoneName(s.zoneId),
-    short: shortZoneName(s.zoneId),
-    color: SERIES_VARS[i],
-    points: readings[i]
-      .filter((r) => !r.isAnomaly && new Date(r.recordedAt) >= since)
-      .map((r) => ({ t: new Date(r.recordedAt).getTime(), v: r.value }))
-      .sort((a, b) => a.t - b.t),
-  }));
+        chartSeries = moisture.map((s, i) => ({
+          name: zoneName(s.zoneId),
+          short: shortZoneName(s.zoneId),
+          color: SERIES_VARS[i],
+          points: readings[i]
+            .filter((r) => !r.isAnomaly && new Date(r.recordedAt) >= since)
+            .map((r) => ({ t: new Date(r.recordedAt).getTime(), v: r.value }))
+            .sort((a, b) => a.t - b.t),
+        }));
 
-  $('legend').innerHTML = chartSeries
-    .map((s) => `<span><i class="swatch" style="background:var(${s.color})"></i>${escapeHtml(s.name)}</span>`)
-    .join('');
-  drawChart();
-  renderChartTable();
-}
+        $('legend').innerHTML =
+          chartSeries
+            .map(
+              (s) =>
+                `<span><i class="swatch" style="background:var(${s.color})"></i>${escapeHtml(s.name)}</span>`,
+            )
+            .join('') +
+          `<span><i class="swatch dashed"></i>Irrigation threshold (${MOISTURE_THRESHOLD}%)</span>`;
+        drawChart();
+        renderChartTable();
+      }
 
-function drawChart() {
-  const box = $('chart');
-  box.querySelector('svg')?.remove();
-  const all = chartSeries.flatMap((s) => s.points);
-  if (all.length === 0) {
-    box.insertAdjacentHTML('afterbegin', '<svg></svg>');
-    box.querySelector('svg').innerHTML = '<text x="0" y="20">No soil moisture readings in the last 24 hours. Run npm run db:seed.</text>';
-    return;
-  }
+      function drawChart() {
+        const box = $('chart');
+        box.querySelector('svg')?.remove();
+        const all = chartSeries.flatMap((s) => s.points);
+        if (all.length === 0) {
+          box.insertAdjacentHTML('afterbegin', '<svg></svg>');
+          box.querySelector('svg').innerHTML =
+            '<text x="0" y="20">No soil moisture readings in the last 24 hours. Run npm run db:seed.</text>';
+          return;
+        }
 
-  const W = box.clientWidth;
-  const H = box.clientHeight;
-  const narrow = W < 520;
-  const m = { top: 10, right: narrow ? 12 : 128, bottom: 26, left: 34 };
-  const iw = W - m.left - m.right;
-  const ih = H - m.top - m.bottom;
+        const W = box.clientWidth;
+        const H = box.clientHeight;
+        const narrow = W < 520;
+        const m = { top: 10, right: narrow ? 12 : 128, bottom: 26, left: 34 };
+        const iw = W - m.left - m.right;
+        const ih = H - m.top - m.bottom;
 
-  const tMax = Date.now();
-  const tMin = tMax - 24 * 3600 * 1000;
-  const vMax = Math.max(MOISTURE_THRESHOLD + 10, Math.ceil(Math.max(...all.map((p) => p.v)) / 10) * 10);
-  const x = (t) => m.left + ((t - tMin) / (tMax - tMin)) * iw;
-  const y = (v) => m.top + ih - (v / vMax) * ih;
+        const tMax = Date.now();
+        const tMin = tMax - 24 * 3600 * 1000;
+        const vMax = Math.max(MOISTURE_THRESHOLD + 10, Math.ceil(Math.max(...all.map((p) => p.v)) / 10) * 10);
+        const x = (t) => m.left + ((t - tMin) / (tMax - tMin)) * iw;
+        const y = (v) => m.top + ih - (v / vMax) * ih;
 
-  const parts = [];
-  for (let v = 0; v <= vMax; v += 10) {
-    parts.push(`<line x1="${m.left}" x2="${m.left + iw}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>`);
-    parts.push(`<text x="${m.left - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`);
-  }
-  const hourMs = 3600 * 1000;
-  const firstTick = Math.ceil(tMin / (6 * hourMs)) * 6 * hourMs;
-  for (let t = firstTick; t <= tMax; t += 6 * hourMs) {
-    parts.push(`<text x="${x(t)}" y="${H - 6}" text-anchor="middle">${timeFmt.format(new Date(t))}</text>`);
-  }
+        const parts = [];
+        for (let v = 0; v <= vMax; v += 10) {
+          parts.push(
+            `<line x1="${m.left}" x2="${m.left + iw}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>`,
+          );
+          parts.push(`<text x="${m.left - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`);
+        }
+        const hourMs = 3600 * 1000;
+        const firstTick = Math.ceil(tMin / (6 * hourMs)) * 6 * hourMs;
+        for (let t = firstTick; t <= tMax; t += 6 * hourMs) {
+          parts.push(
+            `<text x="${x(t)}" y="${H - 6}" text-anchor="middle">${timeFmt.format(new Date(t))}</text>`,
+          );
+        }
 
-  // irrigation threshold
-  parts.push(`<line x1="${m.left}" x2="${m.left + iw}" y1="${y(MOISTURE_THRESHOLD)}" y2="${y(MOISTURE_THRESHOLD)}"
+        // irrigation threshold
+        parts.push(`<line x1="${m.left}" x2="${m.left + iw}" y1="${y(MOISTURE_THRESHOLD)}" y2="${y(MOISTURE_THRESHOLD)}"
     stroke="var(--text-3)" stroke-dasharray="4 4"/>`);
-  parts.push(`<text x="${m.left + 6}" y="${y(MOISTURE_THRESHOLD) - 6}">Irrigation threshold</text>`);
 
-  for (const s of chartSeries) {
-    if (s.points.length === 0) continue;
-    const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
-    parts.push(`<path d="${d}" fill="none" stroke="var(${s.color})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
-  }
+        for (const s of chartSeries) {
+          if (s.points.length === 0) continue;
+          const d = s.points
+            .map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`)
+            .join('');
+          parts.push(
+            `<path d="${d}" fill="none" stroke="var(${s.color})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`,
+          );
+        }
 
-  // direct labels at line ends, nudged apart so they don't overlap
-  if (!narrow) {
-    const ends = chartSeries
-      .filter((s) => s.points.length)
-      .map((s) => {
-        const last = s.points[s.points.length - 1];
-        return { s, last, ly: y(last.v) };
-      })
-      .sort((a, b) => a.ly - b.ly);
-    for (let i = 1; i < ends.length; i++) ends[i].ly = Math.max(ends[i].ly, ends[i - 1].ly + 15);
-    for (const e of ends) {
-      const short = e.s.short;
-      parts.push(`<text class="end-label" x="${x(e.last.t) + 8}" y="${e.ly + 4}">${escapeHtml(short)} ${e.last.v.toFixed(0)}%</text>`);
-    }
-  }
+        // direct labels at line ends, nudged apart so they don't overlap
+        if (!narrow) {
+          const ends = chartSeries
+            .filter((s) => s.points.length)
+            .map((s) => {
+              const last = s.points[s.points.length - 1];
+              return { s, last, ly: y(last.v) };
+            })
+            .sort((a, b) => a.ly - b.ly);
+          for (let i = 1; i < ends.length; i++) ends[i].ly = Math.max(ends[i].ly, ends[i - 1].ly + 15);
+          for (const e of ends) {
+            const short = e.s.short;
+            parts.push(
+              `<text class="end-label" x="${x(e.last.t) + 8}" y="${e.ly + 4}">${escapeHtml(short)} ${e.last.v.toFixed(0)}%</text>`,
+            );
+          }
+        }
 
-  parts.push(`<line id="cross" y1="${m.top}" y2="${m.top + ih}" stroke="var(--text-3)" visibility="hidden"/>`);
-  parts.push(`<g id="dots"></g>`);
-  parts.push(`<rect id="hit" x="${m.left}" y="${m.top}" width="${iw}" height="${ih}" fill="transparent"/>`);
+        parts.push(
+          `<line id="cross" y1="${m.top}" y2="${m.top + ih}" stroke="var(--text-3)" visibility="hidden"/>`,
+        );
+        parts.push(`<g id="dots"></g>`);
+        parts.push(
+          `<rect id="hit" x="${m.left}" y="${m.top}" width="${iw}" height="${ih}" fill="transparent"/>`,
+        );
 
-  box.insertAdjacentHTML('afterbegin', `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Soil moisture over the last 24 hours">${parts.join('')}</svg>`);
+        box.insertAdjacentHTML(
+          'afterbegin',
+          `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Soil moisture over the last 24 hours">${parts.join('')}</svg>`,
+        );
 
-  const hit = box.querySelector('#hit');
-  const cross = box.querySelector('#cross');
-  const dots = box.querySelector('#dots');
-  const tip = $('tooltip');
+        const hit = box.querySelector('#hit');
+        const cross = box.querySelector('#cross');
+        const dots = box.querySelector('#dots');
+        const tip = $('tooltip');
 
-  hit.addEventListener('mousemove', (ev) => {
-    const rect = box.getBoundingClientRect();
-    const px = ev.clientX - rect.left;
-    const t = tMin + ((px - m.left) / iw) * (tMax - tMin);
-    const nearest = chartSeries.map((s) => {
-      let best = null;
-      for (const p of s.points) if (!best || Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
-      return { s, p: best };
-    }).filter((n) => n.p && Math.abs(n.p.t - t) < 30 * 60 * 1000);
-    if (nearest.length === 0) return hide();
+        hit.addEventListener('mousemove', (ev) => {
+          const rect = box.getBoundingClientRect();
+          const px = ev.clientX - rect.left;
+          const t = tMin + ((px - m.left) / iw) * (tMax - tMin);
+          const nearest = chartSeries
+            .map((s) => {
+              let best = null;
+              for (const p of s.points) if (!best || Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+              return { s, p: best };
+            })
+            .filter((n) => n.p && Math.abs(n.p.t - t) < 30 * 60 * 1000);
+          if (nearest.length === 0) return hide();
 
-    const cx = x(nearest[0].p.t);
-    cross.setAttribute('x1', cx);
-    cross.setAttribute('x2', cx);
-    cross.setAttribute('visibility', 'visible');
-    dots.innerHTML = nearest.map((n) =>
-      `<circle cx="${x(n.p.t)}" cy="${y(n.p.v)}" r="4" fill="var(${n.s.color})" stroke="var(--card)" stroke-width="2"/>`).join('');
+          const cx = x(nearest[0].p.t);
+          cross.setAttribute('x1', cx);
+          cross.setAttribute('x2', cx);
+          cross.setAttribute('visibility', 'visible');
+          dots.innerHTML = nearest
+            .map(
+              (n) =>
+                `<circle cx="${x(n.p.t)}" cy="${y(n.p.v)}" r="4" fill="var(${n.s.color})" stroke="var(--card)" stroke-width="2"/>`,
+            )
+            .join('');
 
-    tip.innerHTML = `<div class="t">${dateTimeFmt.format(new Date(nearest[0].p.t))}</div>` +
-      nearest.map((n) => `<div class="row"><i class="swatch" style="background:var(${n.s.color})"></i>${escapeHtml(n.s.name)}<b>${n.p.v.toFixed(1)}%</b></div>`).join('');
-    tip.style.display = 'block';
-    const left = cx + 12 + tip.offsetWidth > W ? cx - tip.offsetWidth - 12 : cx + 12;
-    tip.style.left = `${Math.max(0, left)}px`;
-    tip.style.top = `${m.top}px`;
-  });
-  const hide = () => {
-    cross.setAttribute('visibility', 'hidden');
-    dots.innerHTML = '';
-    tip.style.display = 'none';
-  };
-  hit.addEventListener('mouseleave', hide);
-}
+          tip.innerHTML =
+            `<div class="t">${dateTimeFmt.format(new Date(nearest[0].p.t))}</div>` +
+            nearest
+              .map(
+                (n) =>
+                  `<div class="row"><i class="swatch" style="background:var(${n.s.color})"></i>${escapeHtml(n.s.name)}<b>${n.p.v.toFixed(1)}%</b></div>`,
+              )
+              .join('');
+          tip.style.display = 'block';
+          const left = cx + 12 + tip.offsetWidth > W ? cx - tip.offsetWidth - 12 : cx + 12;
+          tip.style.left = `${Math.max(0, left)}px`;
+          tip.style.top = `${m.top}px`;
+        });
+        const hide = () => {
+          cross.setAttribute('visibility', 'hidden');
+          dots.innerHTML = '';
+          tip.style.display = 'none';
+        };
+        hit.addEventListener('mouseleave', hide);
+      }
 
-function renderChartTable() {
-  const hourMs = 3600 * 1000;
-  const end = Math.floor(Date.now() / hourMs) * hourMs;
-  const rows = [];
-  for (let h = end - 23 * hourMs; h <= end; h += hourMs) {
-    const cells = chartSeries.map((s) => {
-      const pts = s.points.filter((p) => p.t >= h && p.t < h + hourMs);
-      return pts.length ? (pts.reduce((sum, p) => sum + p.v, 0) / pts.length).toFixed(1) + '%' : '-';
-    });
-    rows.push(`<tr><td>${timeFmt.format(new Date(h))}</td>${cells.map((c) => `<td class="num">${c}</td>`).join('')}</tr>`);
-  }
-  $('chartTable').innerHTML = `<table><thead><tr><th>Hour</th>${chartSeries.map((s) => `<th class="num">${escapeHtml(s.name)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
-}
+      function renderChartTable() {
+        const hourMs = 3600 * 1000;
+        const end = Math.floor(Date.now() / hourMs) * hourMs;
+        const rows = [];
+        for (let h = end - 23 * hourMs; h <= end; h += hourMs) {
+          const cells = chartSeries.map((s) => {
+            const pts = s.points.filter((p) => p.t >= h && p.t < h + hourMs);
+            return pts.length ? (pts.reduce((sum, p) => sum + p.v, 0) / pts.length).toFixed(1) + '%' : '-';
+          });
+          rows.push(
+            `<tr><td>${timeFmt.format(new Date(h))}</td>${cells.map((c) => `<td class="num">${c}</td>`).join('')}</tr>`,
+          );
+        }
+        $('chartTable').innerHTML =
+          `<table><thead><tr><th>Hour</th>${chartSeries.map((s) => `<th class="num">${escapeHtml(s.name)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+      }
 
-// ---------- query plan + test batch ----------
+      // ---------- query plan + test batch ----------
 
-function fillSensorSelects() {
-  const options = sensors
-    .filter((s) => s.isActive)
-    .map((s) => `<option value="${s.id}">${escapeHtml(s.serialNumber)} (${escapeHtml(shortZoneName(s.zoneId))})</option>`)
-    .join('');
-  for (const id of ['planSensor', 'ingestSensor']) {
-    const el = $(id);
-    const current = el.value;
-    el.innerHTML = options;
-    if (current) el.value = current;
-  }
-}
+      function fillSensorSelects() {
+        const options = sensors
+          .filter((s) => s.isActive)
+          .map(
+            (s) =>
+              `<option value="${s.id}">${escapeHtml(s.serialNumber)} (${escapeHtml(shortZoneName(s.zoneId))})</option>`,
+          )
+          .join('');
+        for (const id of ['planSensor', 'ingestSensor']) {
+          const el = $(id);
+          const current = el.value;
+          el.innerHTML = options;
+          if (current) el.value = current;
+        }
+      }
 
-$('planBtn').addEventListener('click', async () => {
-  const btn = $('planBtn');
-  btn.disabled = true;
-  try {
-    const plan = await api(`/api/v1/stats/query-plan?sensorId=${$('planSensor').value}&limit=100`);
-    $('planResult').innerHTML = `Execution <b>${plan.executionMs.toFixed(3)} ms</b>, planning ${plan.planningMs.toFixed(3)} ms`;
-    $('planOut').textContent = plan.plan.join('\n');
-  } catch (err) {
-    $('planResult').innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
-  } finally {
-    btn.disabled = false;
-  }
-});
+      $('planBtn').addEventListener('click', async () => {
+        const btn = $('planBtn');
+        btn.disabled = true;
+        try {
+          const plan = await api(`/api/v1/stats/query-plan?sensorId=${$('planSensor').value}&limit=100`);
+          $('planResult').innerHTML =
+            `Execution <b>${plan.executionMs.toFixed(3)} ms</b>, planning ${plan.planningMs.toFixed(3)} ms`;
+          $('planOut').textContent = plan.plan.join('\n');
+        } catch (err) {
+          $('planResult').innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
 
-$('ingestBtn').addEventListener('click', async () => {
-  const btn = $('ingestBtn');
-  const sensor = sensors.find((s) => s.id === $('ingestSensor').value);
-  if (!sensor) return;
-  btn.disabled = true;
+      $('ingestBtn').addEventListener('click', async () => {
+        const btn = $('ingestBtn');
+        const sensor = sensors.find((s) => s.id === $('ingestSensor').value);
+        if (!sensor) return;
+        btn.disabled = true;
 
-  const span = sensor.maxValue - sensor.minValue;
-  const now = Date.now();
-  const readings = Array.from({ length: 20 }, (_, i) => ({
-    sensorId: sensor.id,
-    // readings 5 and 15 are deliberately out of range
-    value: i === 5 ? sensor.maxValue + span : i === 15 ? sensor.minValue - span
-      : +(sensor.minValue + span * (0.4 + Math.random() * 0.2)).toFixed(2),
-    recordedAt: new Date(now - (19 - i) * 30_000).toISOString(),
-  }));
+        const span = sensor.maxValue - sensor.minValue;
+        const now = Date.now();
+        const readings = Array.from({ length: 20 }, (_, i) => ({
+          sensorId: sensor.id,
+          // readings 5 and 15 are deliberately out of range
+          value:
+            i === 5
+              ? sensor.maxValue + span
+              : i === 15
+                ? sensor.minValue - span
+                : +(sensor.minValue + span * (0.4 + Math.random() * 0.2)).toFixed(2),
+          recordedAt: new Date(now - (19 - i) * 30_000).toISOString(),
+        }));
 
-  try {
-    const result = await api('/api/v1/sensors/readings/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ readings }),
-    });
-    $('ingestResult').innerHTML = `Accepted <b>${result.accepted}</b>, anomalies <b>${result.anomalies}</b>, rejected <b>${result.rejected}</b>`;
-    $('ingestOut').classList.remove('muted');
-    $('ingestOut').textContent = JSON.stringify(result, null, 2);
-    refresh();
-  } catch (err) {
-    $('ingestResult').innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
-  } finally {
-    btn.disabled = false;
-  }
-});
+        try {
+          const result = await api('/api/v1/sensors/readings/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ readings }),
+          });
+          $('ingestResult').innerHTML =
+            `Accepted <b>${result.accepted}</b>, anomalies <b>${result.anomalies}</b>, ` +
+            `duplicates <b>${result.duplicates}</b>, rejected <b>${result.rejected}</b>`;
+          $('ingestOut').classList.remove('muted');
+          $('ingestOut').textContent = JSON.stringify(result, null, 2);
+          refresh();
+        } catch (err) {
+          $('ingestResult').innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
 
-// ---------- refresh loop ----------
+      // ---------- refresh loop ----------
 
-async function refresh() {
-  try {
-    [zones, sensors] = await Promise.all([api('/api/v1/zones'), api('/api/v1/sensors?limit=1000')]);
-    const [stats, weather] = await Promise.all([api('/api/v1/stats'), api('/api/v1/weather?limit=24')]);
-    renderStats(stats);
-    renderWeather(weather);
-    fillSensorSelects();
-    await Promise.all([loadMoisture(), renderSchedules()]);
-    $('status').innerHTML = `<b class="ok">API connected</b> · updated ${timeFmt.format(new Date())}`;
-  } catch (err) {
-    $('status').innerHTML = `<b class="down">API unavailable</b> · ${escapeHtml(err.message)}`;
-  }
-}
+      async function refresh() {
+        try {
+          [zones, sensors] = await Promise.all([api('/api/v1/zones'), api('/api/v1/sensors?limit=1000')]);
+          const [stats, weather] = await Promise.all([api('/api/v1/stats'), api('/api/v1/weather?limit=24')]);
+          renderStats(stats);
+          renderWeather(weather);
+          fillSensorSelects();
+          await Promise.all([loadMoisture(), renderSchedules()]);
+          $('status').innerHTML = `<b class="ok">API connected</b> · updated ${timeFmt.format(new Date())}`;
+        } catch (err) {
+          $('status').innerHTML = `<b class="down">API unavailable</b> · ${escapeHtml(err.message)}`;
+        }
+      }
 
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(drawChart, 150);
-});
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawChart, 150);
+      });
 
-refresh();
-setInterval(refresh, REFRESH_MS);
-</script>
-</body>
+      refresh();
+      setInterval(refresh, REFRESH_MS);
+    </script>
+  </body>
 </html>

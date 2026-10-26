@@ -1,7 +1,8 @@
 // Weather HTTP router — stored snapshots, new snapshot recording, and Open-Meteo proxy.
 import { Router, Request, Response, NextFunction } from 'express';
 import { WeatherService } from './weather.service';
-import { CreateWeatherSnapshotSchema } from './weather.validation';
+import { CreateWeatherSnapshotSchema, ExternalWeatherQuerySchema } from './weather.validation';
+import { AppError, ErrorCode } from '../../shared/errors/AppError';
 
 export function buildWeatherRouter(weatherService: WeatherService): Router {
   const router = Router();
@@ -39,13 +40,7 @@ export function buildWeatherRouter(weatherService: WeatherService): Router {
   // GET /api/v1/weather/external?lat=&lon=&timezone=&past_days=
   router.get('/external', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const lat  = parseFloat(req.query.lat as string);
-      const lon  = parseFloat(req.query.lon as string);
-      const tz   = (req.query.timezone as string) || 'UTC';
-      const days = Math.min(parseInt((req.query.past_days as string) || '7', 10), 14);
-
-      if (isNaN(lat) || lat < -90  || lat > 90)  { res.status(400).json({ error: 'Invalid lat' }); return; }
-      if (isNaN(lon) || lon < -180 || lon > 180) { res.status(400).json({ error: 'Invalid lon' }); return; }
+      const { lat, lon, timezone: tz, past_days: days } = ExternalWeatherQuerySchema.parse(req.query);
 
       const url =
         `https://api.open-meteo.com/v1/forecast` +
@@ -56,10 +51,9 @@ export function buildWeatherRouter(weatherService: WeatherService): Router {
 
       const upstream = await fetch(url);
       if (!upstream.ok) {
-        res.status(502).json({ error: `Open-Meteo responded with ${upstream.status}` });
-        return;
+        throw new AppError(`Open-Meteo responded with ${upstream.status}`, ErrorCode.UPSTREAM_ERROR, 502);
       }
-      const data = await upstream.json() as unknown;
+      const data = (await upstream.json()) as unknown;
       res.json(data);
     } catch (err) {
       next(err);

@@ -16,6 +16,7 @@ function mockReading(value: number, isAnomaly = false): SensorReading {
 function makeMockIrrigationRepo(): IrrigationRepository {
   return {
     create: jest.fn().mockResolvedValue({ id: 'event-1', status: 'ACTIVE' }),
+    findActiveByZone: jest.fn().mockResolvedValue(null),
     findById: jest.fn(),
     findByZone: jest.fn(),
     complete: jest.fn(),
@@ -79,5 +80,18 @@ describe('IrrigationService.evaluateAndTrigger', () => {
 
     const result = await service.evaluateAndTrigger('zone-1', ['sensor-1']);
     expect(result).toBeNull();
+  });
+
+  it('does not start a second event while the zone is already irrigating', async () => {
+    const irrigationRepo = makeMockIrrigationRepo();
+    (irrigationRepo.findActiveByZone as jest.Mock).mockResolvedValue({ id: 'event-0', status: 'ACTIVE' });
+    const sensorRepo = {
+      findLatestReadings: jest.fn().mockResolvedValue([mockReading(10)]),
+    } as unknown as SensorRepository;
+    const service = new IrrigationService(irrigationRepo, sensorRepo);
+
+    const result = await service.evaluateAndTrigger('zone-1', ['sensor-1']);
+    expect(result).toBeNull();
+    expect(irrigationRepo.create).not.toHaveBeenCalled();
   });
 });

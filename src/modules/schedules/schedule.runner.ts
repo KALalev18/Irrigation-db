@@ -1,4 +1,5 @@
-// Checks enabled schedules once per minute. When a schedule is due, it skips
+// Once per minute: closes irrigation events whose duration has passed, then
+// checks enabled schedules. When a schedule is due, it skips
 // the run if it rained enough in the last 24 h, otherwise it hands the zone's
 // soil moisture sensors to IrrigationService, which decides whether to water.
 import { ScheduleRepository } from './schedule.repository';
@@ -36,6 +37,8 @@ export class ScheduleRunner {
     const minuteKey = now.toISOString().slice(0, 16);
     if (minuteKey === this.lastMinute) return [];
     this.lastMinute = minuteKey;
+
+    await this.irrigationService.completeFinished(now);
 
     const due = (await this.scheduleRepo.findAllEnabled()).filter((s) => cronMatches(s.cronExpr, now));
     if (due.length === 0) return [];

@@ -43,8 +43,10 @@ model Sensor {
   @@map("sensors")
 }
 
-// The (sensor_id, recorded_at DESC) index serves the "latest N readings for a sensor"
-// query without a sort step. See docs/benchmark.md for measurements.
+// The unique (sensor_id, recorded_at DESC) index does two jobs: it serves the
+// "latest N readings for a sensor" query without a sort step (see docs/benchmark.md),
+// and it makes a replayed gateway batch a no-op instead of a duplicate row.
+// value has no CHECK on purpose: out-of-range readings are stored and flagged.
 model SensorReading {
   id         BigInt   @id @default(autoincrement())
   sensorId   String   @map("sensor_id")
@@ -56,7 +58,7 @@ model SensorReading {
 
   sensor Sensor @relation(fields: [sensorId], references: [id])
 
-  @@index([sensorId, recordedAt(sort: Desc)])
+  @@unique([sensorId, recordedAt(sort: Desc)])
   @@index([recordedAt])
   @@map("sensor_readings")
 }

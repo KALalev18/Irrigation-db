@@ -23,6 +23,7 @@ function setup({ rained = false } = {}) {
   } as unknown as SensorRepository;
   const irrigationService = {
     evaluateAndTrigger: jest.fn().mockResolvedValue({ id: 'event-1' }),
+    completeFinished: jest.fn().mockResolvedValue(0),
   } as unknown as IrrigationService;
   const weatherService = {
     hasSufficientRecentPrecipitation: jest.fn().mockResolvedValue(rained),
@@ -42,7 +43,11 @@ describe('ScheduleRunner.tick', () => {
     expect(sensorRepo.findAll).toHaveBeenCalledWith(
       expect.objectContaining({ zoneId: 'zone-1', type: { equals: 'SOIL_MOISTURE' }, isActive: true }),
     );
-    expect(irrigationService.evaluateAndTrigger).toHaveBeenCalledWith('zone-1', ['sensor-1', 'sensor-2'], 900);
+    expect(irrigationService.evaluateAndTrigger).toHaveBeenCalledWith(
+      'zone-1',
+      ['sensor-1', 'sensor-2'],
+      900,
+    );
   });
 
   it('does nothing when no schedule is due', async () => {
@@ -61,6 +66,15 @@ describe('ScheduleRunner.tick', () => {
 
     expect(fired).toEqual([]);
     expect(irrigationService.evaluateAndTrigger).not.toHaveBeenCalled();
+  });
+
+  it('closes finished events every minute, even when nothing is due', async () => {
+    const { runner, irrigationService } = setup();
+    const now = new Date(2026, 5, 3, 7, 0);
+
+    await runner.tick(now);
+
+    expect(irrigationService.completeFinished).toHaveBeenCalledWith(now);
   });
 
   it('processes each minute only once', async () => {

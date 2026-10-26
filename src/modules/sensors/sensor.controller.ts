@@ -2,11 +2,7 @@
 // Routes: GET /, GET /:id, GET /:id/readings, POST /, POST /readings/bulk, DELETE /:id
 import { Router, Request, Response, NextFunction } from 'express';
 import { SensorService } from './sensor.service';
-import {
-  CreateSensorSchema,
-  BulkIngestReadingSchema,
-  SensorQuerySchema,
-} from './sensor.validation';
+import { CreateSensorSchema, BulkIngestReadingSchema, SensorQuerySchema } from './sensor.validation';
 import { iotRateLimiter } from '../../infrastructure/rateLimiter';
 
 export function buildSensorRouter(sensorService: SensorService): Router {
@@ -41,7 +37,6 @@ export function buildSensorRouter(sensorService: SensorService): Router {
   // GET /api/v1/sensors/:id/readings?limit=
   router.get('/:id/readings', async (req: Request, res: Response, next: NextFunction) => {
     try {
-
       const limit = Math.min(parseInt((req.query.limit as string) ?? '100', 10), 1000);
       const readings = await sensorService.getLatestReadings(req.params.id as string, limit);
       res.json({ data: readings });
@@ -64,19 +59,15 @@ export function buildSensorRouter(sensorService: SensorService): Router {
   // POST /api/v1/sensors/readings/bulk — IoT gateway batch ingest
   // This endpoint has its own rate limiter (500 req/min) instead of the
   // global 200 req/min because gateways legitimately burst during reconnects.
-  router.post(
-    '/readings/bulk',
-    iotRateLimiter,
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const dto = BulkIngestReadingSchema.parse(req.body);
-        const result = await sensorService.bulkIngest(dto);
-        res.status(202).json({ data: result });
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
+  router.post('/readings/bulk', iotRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const dto = BulkIngestReadingSchema.parse(req.body);
+      const result = await sensorService.bulkIngest(dto);
+      res.status(202).json({ data: result });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // DELETE /api/v1/sensors/:id — soft-delete (deactivate)
   router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
@@ -90,4 +81,3 @@ export function buildSensorRouter(sensorService: SensorService): Router {
 
   return router;
 }
-

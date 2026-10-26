@@ -22,8 +22,7 @@ function makeMockRepo(overrides: Partial<SensorRepository> = {}): SensorReposito
     create: jest.fn().mockResolvedValue(mockSensor),
     deactivate: jest.fn().mockResolvedValue({ ...mockSensor, isActive: false }),
     findLatestReadings: jest.fn().mockResolvedValue([]),
-    bulkCreateReadings: jest.fn().mockResolvedValue({ count: 0 }),
-    countReadingsInWindow: jest.fn().mockResolvedValue(0),
+    bulkCreateReadings: jest.fn().mockImplementation(async (rows: unknown[]) => ({ count: rows.length })),
     ...overrides,
   } as unknown as SensorRepository;
 }
@@ -86,6 +85,21 @@ describe('SensorService.bulkIngest', () => {
 
     expect(result.anomalies).toBe(1);
     expect(result.accepted).toBe(1);
+  });
+
+  it('reports readings the database skipped as duplicates', async () => {
+    const repo = makeMockRepo({ bulkCreateReadings: jest.fn().mockResolvedValue({ count: 1 }) });
+    const service = new SensorService(repo);
+
+    const result = await service.bulkIngest({
+      readings: [
+        { sensorId: mockSensor.id, value: 30, recordedAt: '2026-10-01T06:00:00.000Z' },
+        { sensorId: mockSensor.id, value: 31, recordedAt: '2026-10-01T06:10:00.000Z' },
+      ],
+    });
+
+    expect(result.accepted).toBe(1);
+    expect(result.duplicates).toBe(1);
   });
 });
 

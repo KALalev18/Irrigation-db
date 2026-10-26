@@ -1,12 +1,14 @@
 // Two rate limiters with different budgets:
 // - IoT limiter (500/min): allows burst replays when gateways reconnect after an outage.
 // - API limiter (200/min): stricter general ceiling to catch scraping and polling loops.
-// Both send RateLimit-* headers (RFC 6585) so clients can back off automatically.
+// Both answer 429 and send RateLimit-* headers so clients can back off.
 import rateLimit from 'express-rate-limit';
 import { AppError, ErrorCode } from '../shared/errors/AppError';
 
-// Applied only to POST /api/v1/sensors/readings/bulk.
-// Thresholds are env-configurable so they can be tuned in prod without a redeploy.
+export const BULK_INGEST_PATH = '/api/v1/sensors/readings/bulk';
+
+// Applied only to the bulk ingest route. Thresholds come from env vars so they
+// can be tuned without a code change.
 export const iotRateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS ?? '500', 10),
@@ -17,10 +19,12 @@ export const iotRateLimiter = rateLimit({
   },
 });
 
-// Applied globally in app.ts.
+// Applied globally in app.ts. Skips bulk ingest, which has its own higher budget;
+// otherwise gateways would be capped at 200/min before the IoT limiter is reached.
 export const apiRateLimiter = rateLimit({
   windowMs: 60_000,
   max: 200,
+  skip: (req) => req.method === 'POST' && req.path === BULK_INGEST_PATH,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, _res, next) => {

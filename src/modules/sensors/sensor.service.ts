@@ -8,9 +8,10 @@ import { AppError, ErrorCode } from '../../shared/errors/AppError';
 import { logger } from '../../infrastructure/logger';
 
 type IngestResult = {
-  accepted: number;
+  accepted: number; // rows actually inserted
+  duplicates: number; // same sensor + timestamp already stored (gateway replay)
   rejected: number; // unknown or deactivated sensor
-  anomalies: number; // stored with isAnomaly=true, not dropped
+  anomalies: number; // flagged with isAnomaly=true, not dropped
 };
 
 export class SensorService {
@@ -47,14 +48,12 @@ export class SensorService {
   }
 
   async bulkIngest(dto: BulkIngestReadingDto): Promise<IngestResult> {
-    const result: IngestResult = { accepted: 0, rejected: 0, anomalies: 0 };
+    const result: IngestResult = { accepted: 0, duplicates: 0, rejected: 0, anomalies: 0 };
 
     // batch-fetch all referenced sensors to avoid N+1 inside the loop
     const uniqueIds = [...new Set(dto.readings.map((r) => r.sensorId))];
     const found = await Promise.all(uniqueIds.map((id) => this.repo.findById(id)));
-    const sensorMap = new Map(
-      found.filter((s): s is Sensor => s !== null).map((s) => [s.id, s]),
-    );
+    const sensorMap = new Map(found.filter((s): s is Sensor => s !== null).map((s) => [s.id, s]));
 
     const toInsert: Prisma.SensorReadingCreateManyInput[] = [];
 
@@ -76,9 +75,7 @@ export class SensorService {
       // out-of-range values stored with isAnomaly=true rather than dropped — audit trail
       // survives recalibration, and irrigation.service can abort when the rate is too high.
       const isAnomaly =
-        reading.value < 0 ||
-        reading.value < sensor.minValue ||
-        reading.value > sensor.maxValue;
+        reading.value < 0 || reading.value < sensor.minValue || reading.value > sensor.maxValue;
 
       if (isAnomaly) {
         logger.warn('Anomalous reading', {
@@ -95,15 +92,16 @@ export class SensorService {
         recordedAt: reading.recordedAt ? new Date(reading.recordedAt) : new Date(),
         isAnomaly,
       });
-      result.accepted++;
     }
 
-    // skipDuplicates handles gateway replays after a connectivity outage
+    // The unique (sensor_id, recorded_at) index plus skipDuplicates turns a
+    // replayed batch into a no-op; the returned count says how many were new.
     if (toInsert.length > 0) {
-      await this.repo.bulkCreateReadings(toInsert);
+      const { count } = await this.repo.bulkCreateReadings(toInsert);
+      result.accepted = count;
+      result.duplicates = toInsert.length - count;
     }
 
     return result;
   }
 }
-

@@ -16,13 +16,17 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests prisma scripts --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:integration": "jest -c jest.integration.config.json --runInBand",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
     "db:studio": "prisma studio",
+    "reports": "docker compose exec -T postgres psql -U irrigator -d irrigation_db -v ON_ERROR_STOP=1 < sql/reports.sql",
     "bench": "ts-node --transpile-only scripts/benchmark-index.ts"
   },
   "prisma": {
@@ -35,7 +39,7 @@
     "express-rate-limit": "8.5.2",
     "prisma": "6.19.3",
     "winston": "3.19.0",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
@@ -47,6 +51,7 @@
     "@typescript-eslint/parser": "8.60.0",
     "eslint": "9.39.4",
     "jest": "30.4.2",
+    "prettier": "3.9.10",
     "supertest": "7.2.2",
     "ts-jest": "29.4.11",
     "ts-node": "10.9.2",

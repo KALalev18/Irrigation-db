@@ -32,16 +32,19 @@ export class IrrigationService {
     return event;
   }
 
-  async listByZone(
-    zoneId: string,
-    params: { limit: number; offset: number },
-  ): Promise<IrrigationEvent[]> {
+  async listByZone(zoneId: string, params: { limit: number; offset: number }): Promise<IrrigationEvent[]> {
     return this.irrigationRepo.findByZone(zoneId, params);
   }
 
   async complete(id: string, dto: UpdateIrrigationEventDto): Promise<IrrigationEvent> {
     await this.getById(id);
     return this.irrigationRepo.complete(id, dto);
+  }
+
+  async completeFinished(now: Date): Promise<number> {
+    const closed = await this.irrigationRepo.completeFinished(now);
+    if (closed > 0) logger.info('Closed finished irrigation events', { count: closed });
+    return closed;
   }
 
   // Called by the schedule runner before firing a SENSOR_THRESHOLD event.
@@ -53,6 +56,13 @@ export class IrrigationService {
   ): Promise<IrrigationEvent | null> {
     if (moistureSensors.length === 0) {
       logger.warn('No moisture sensors configured for zone', { zoneId });
+      return null;
+    }
+
+    // A zone that is already being watered must not get a second overlapping event.
+    const active = await this.irrigationRepo.findActiveByZone(zoneId);
+    if (active) {
+      logger.info('Zone already irrigating, skipping', { zoneId, eventId: active.id });
       return null;
     }
 
@@ -70,7 +80,11 @@ export class IrrigationService {
     // A sensor stuck at 0% would otherwise trigger irrigation every cycle.
     const anomalyCount = flat.filter((r) => r.isAnomaly).length;
     if (anomalyCount / flat.length >= ANOMALY_ABORT_RATIO) {
-      logger.warn('Anomaly ratio too high, skipping auto-irrigation', { zoneId, anomalyCount, total: flat.length });
+      logger.warn('Anomaly ratio too high, skipping auto-irrigation', {
+        zoneId,
+        anomalyCount,
+        total: flat.length,
+      });
       return null;
     }
 
@@ -96,4 +110,3 @@ export class IrrigationService {
     });
   }
 }
-

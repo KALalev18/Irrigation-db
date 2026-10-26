@@ -7,12 +7,7 @@ import { Prisma } from '@prisma/client';
 import { AppError, ErrorCode } from '../errors/AppError';
 import { logger } from '../../infrastructure/logger';
 
-export function globalErrorHandler(
-  err: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
+export function globalErrorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
   // --- 1. Known operational domain error ---
   if (err instanceof AppError) {
     if (!err.isOperational) {
@@ -67,7 +62,20 @@ export function globalErrorHandler(
     return;
   }
 
-  // --- 5. Unknown — never leak internals ---
+  // --- 5. CHECK constraint (Postgres 23514). Prisma doesn't map these to a code. ---
+  if (err instanceof Prisma.PrismaClientUnknownRequestError && err.message.includes('"23514"')) {
+    const constraint = /check constraint \\?"([a-z0-9_]+)\\?"/.exec(err.message)?.[1];
+    res.status(422).json({
+      error: {
+        code: ErrorCode.CHECK_VIOLATION,
+        message: 'Value rejected by a database constraint',
+        ...(constraint && { meta: { constraint } }),
+      },
+    });
+    return;
+  }
+
+  // --- 6. Unknown — never leak internals ---
   logger.error('Unhandled exception', { err });
   res.status(500).json({
     error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },

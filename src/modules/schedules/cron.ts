@@ -7,7 +7,7 @@ const FIELD_RANGES: Array<[number, number]> = [
   [0, 23], // hour
   [1, 31], // day of month
   [1, 12], // month
-  [0, 6],  // day of week
+  [0, 6], // day of week
 ];
 
 function fieldMatches(field: string, value: number, [min, max]: [number, number]): boolean {
@@ -33,13 +33,7 @@ export function cronMatches(expr: string, date: Date): boolean {
   const fields = expr.trim().split(/\s+/);
   if (fields.length !== 5) return false;
 
-  const values = [
-    date.getMinutes(),
-    date.getHours(),
-    date.getDate(),
-    date.getMonth() + 1,
-    date.getDay(),
-  ];
+  const values = [date.getMinutes(), date.getHours(), date.getDate(), date.getMonth() + 1, date.getDay()];
 
   return fields.every((field, i) => fieldMatches(field, values[i], FIELD_RANGES[i]));
 }

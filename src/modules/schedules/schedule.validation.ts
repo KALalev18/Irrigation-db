@@ -16,9 +16,7 @@ export const CreateScheduleSchema = z.object({
 export const UpdateScheduleSchema = z.object({
   cronExpr: z
     .string()
-    .regex(
-      /^(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)$/,
-    )
+    .regex(/^(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)\s(\*|[0-9,-/]+)$/)
     .optional(),
   durationSec: z.number().int().min(30).max(86400).optional(),
   isEnabled: z.boolean().optional(),

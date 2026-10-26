@@ -9,12 +9,27 @@ services:
       DATABASE_URL: postgresql://irrigator:securepassword@postgres:5432/irrigation_db
       NODE_ENV: production
       LOG_LEVEL: info
+      # Cron schedules are evaluated in this time zone, e.g. TZ=Europe/Helsinki
+      TZ: ${TZ:-UTC}
     depends_on:
-      postgres:
-        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
     volumes:
       - api_logs:/app/logs
     restart: unless-stopped
+
+  # One-off job: applies migrations and loads sample data if the database is empty
+  seed:
+    build:
+      context: .
+      target: build
+    command: sh -c "node_modules/.bin/prisma migrate deploy && npm run db:seed -- --if-empty"
+    environment:
+      DATABASE_URL: postgresql://irrigator:securepassword@postgres:5432/irrigation_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
 
   postgres:
     image: postgres:16-alpine

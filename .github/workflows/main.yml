@@ -8,6 +8,7 @@ on:
 
 jobs:
   check:
+    name: Format, lint, typecheck, unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,6 +19,42 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run typecheck
+      - run: npm run format:check
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm test
+
+  database:
+    name: Migrations, seed, SQL reports, integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: irrigator
+          POSTGRES_PASSWORD: securepassword
+          POSTGRES_DB: irrigation_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://irrigator:securepassword@localhost:5432/irrigation_db
+      LOG_LEVEL: error
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run db:deploy
+      - run: npm run db:seed
+      - name: Run SQL reports
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/reports.sql
+      - run: npm run test:integration
